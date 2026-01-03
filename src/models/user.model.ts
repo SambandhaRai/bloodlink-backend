@@ -4,7 +4,7 @@ import { UserType } from "../types/user.type";
 const UserSchema: Schema = new Schema({
     fullName : { type : String, required : true, minLength : 2},
     phoneNumber : { type : String, required : true, minLength : 10, maxLength : 10, unique : true},
-    dob : { type : String, required : true },
+    dob : { type : Date, required : true },
     gender : { type : String, required : true },
     bloodGroup : { type : String, required : true },
     healthCondition : { type : String },

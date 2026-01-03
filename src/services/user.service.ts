@@ -13,6 +13,10 @@ export class UserService {
         if(checkEmail) {
             throw new HttpError(403, "Email is already in use");
         }
+        const checkPhone = await userRepository.getUserbyPhoneNumber(data.phoneNumber);
+        if(checkPhone) {
+            throw new HttpError(403, "Phone Number is already in use");
+        }
         const hashedPassword = await bcryptjs.hash(data.password, 10); // 10 complexity
         data.password = hashedPassword;
         const newUser = await userRepository.createUser(data);

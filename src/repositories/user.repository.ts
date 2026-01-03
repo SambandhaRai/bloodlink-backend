@@ -8,10 +8,10 @@ export interface IUserRepository {
     deleteUser(id: String): Promise<boolean | null>;
     
     getUserByEmail(email: String): Promise<IUser | null>;
+    getUserbyPhoneNumber(phoneNumber: String): Promise<IUser | null>;
 }
 
 export class UserRepository implements IUserRepository{
-    
     async createUser(data: Partial<IUser>): Promise<IUser> {
         const user = new UserModel(data);
         return await user.save();
@@ -41,5 +41,11 @@ export class UserRepository implements IUserRepository{
         const user = await UserModel.findOne({"email": email});
         return user;
     }
+
+    async getUserbyPhoneNumber(phoneNumber: String): Promise<IUser | null> {
+        const user = await UserModel.findOne({"phoneNumber": phoneNumber});
+        return user;
+    }
+
 
 }
