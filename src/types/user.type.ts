@@ -7,7 +7,7 @@ export const UserSchema = z.object ({
     gender: z.string().trim(),
     bloodGroup: z.string().trim(),
     healthCondition: z.string().optional(),
-        email: z.string().email(),
+    email: z.string().email(),
     password: z.string().trim().min(6, "Password can't be less than 6 characters"),
     role: z.enum(['admin','user']).default('user'),
 });

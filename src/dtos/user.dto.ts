@@ -2,14 +2,9 @@ import z from "zod";
 import { UserSchema } from "../types/user.type";
 
 const parseToDate = z.preprocess((val) => {
-  if (typeof val === "string" || val instanceof Date) return new Date(val);
-  return undefined;
+    if (typeof val === "string" || val instanceof Date) return new Date(val);
+    return undefined;
 }, z.date());
-
-const AdultDate = parseToDate.refine((d: Date) => {
-  const age = new Date(Date.now() - d.getTime()).getUTCFullYear() - 1970;
-  return age >= 18;
-}, { message: "User must be 18 or older" });
 
 export const CreateUserDto = UserSchema.pick(
     {
@@ -24,7 +19,7 @@ export const CreateUserDto = UserSchema.pick(
     }
 ).extend(
     {
-        dob: AdultDate,
+        dob: parseToDate,
         confirmPassword: z.string().trim().min(6),
     }
 ).refine(
@@ -47,12 +42,12 @@ export const UpdateUserDto = UserSchema.pick(
         email: true,
         password: true,
     }
-).partial();
+).extend({ dob: parseToDate.optional() }).partial();
 export type UpdateUserDto = z.infer<typeof UpdateUserDto>;
 
 // Login
 export const LoginUserDto = z.object({
-    email: z.string().email(),
+    email: z.email(),
     password: z.string().trim().min(6, "Password can't be less than 6 characters"),
 });
 export type LoginUserDto = z.infer<typeof LoginUserDto>;

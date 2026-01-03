@@ -17,6 +17,20 @@ export class UserService {
         if(checkPhone) {
             throw new HttpError(403, "Phone Number is already in use");
         }
+        // parse DOB
+        const d = new Date(data.dob);
+        if (Number.isNaN(d.getTime())) {
+            throw new HttpError(400, "Invalid DOB");
+        }
+        // compute age
+        const today = new Date();
+        let age = today.getFullYear() - d.getFullYear();
+        const m = today.getMonth() - d.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+        // check age
+        if (age < 18) {
+            throw new HttpError(403, "User must be at least 18 years old");
+        }
         const hashedPassword = await bcryptjs.hash(data.password, 10); // 10 complexity
         data.password = hashedPassword;
         const newUser = await userRepository.createUser(data);
