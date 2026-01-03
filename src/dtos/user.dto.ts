@@ -12,12 +12,12 @@ export const CreateUserDto = UserSchema.pick(
         email: true,
         password: true,
     }
-). extend(
+).extend(
     {
         confirmPassword: z.string().trim().min(6),
     }
 ).refine(
-    (data) => data.password != data.confirmPassword,
+    (data) => data.password === data.confirmPassword,
     {
         message: "Passwords do not match",
         path: ["confirmPassword"],
@@ -25,7 +25,18 @@ export const CreateUserDto = UserSchema.pick(
 );
 export type CreateUserDto = z.infer<typeof CreateUserDto>;
 
-export const UpdateUserDto = CreateUserDto.partial();
+export const UpdateUserDto = UserSchema.pick(
+    {
+        fullName: true,
+        phoneNumber: true,
+        dob: true,
+        gender: true,
+        bloodGroup: true,
+        healthCondition: true,
+        email: true,
+        password: true,
+    }
+).partial();
 export type UpdateUserDto = z.infer<typeof UpdateUserDto>;
 
 // Login
