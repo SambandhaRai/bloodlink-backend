@@ -14,7 +14,7 @@ const app: Application = express();
 
 app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
-app.use('/api/admin', bloodGroupRoutes);
+app.use('/api/blood', bloodGroupRoutes);
 
 async function start() {
     await connectDatabase();
