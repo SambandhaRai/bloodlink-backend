@@ -8,13 +8,13 @@ dotenv.config();
 console.log(process.env.PORT);
 
 import authRoutes from "./routes/auth.routes";
-import bloodGroupRoutes from "./routes/admin/admin.routes"
+import adminRoutes from "./routes/admin/admin.routes"
 
 const app: Application = express();
 
 app.use(bodyParser.json());
 app.use('/api/auth', authRoutes);
-app.use('/api/blood', bloodGroupRoutes);
+app.use('/api/admin', adminRoutes);
 
 async function start() {
     await connectDatabase();
