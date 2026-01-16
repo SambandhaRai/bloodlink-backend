@@ -13,9 +13,4 @@ export class AdminService {
         const newBloodGroup = await bloodGroupRepository.createBloodGroup(data);
         return newBloodGroup;
     }
-
-    async getAllBloodGroups(){
-        const bloodGroups = await bloodGroupRepository.getAllBloodGroup();
-        return bloodGroups;
-    }
 }
