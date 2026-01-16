@@ -13,6 +13,20 @@ export class BloodGroupController {
         } catch(err: Error | any) {
             return res.status(err.statusCode || 500).json(
                 { success: false, message: err.message || "Internal Server Error" }
+            );
+        }
+    }
+
+    async getBloodById(req: Request, res: Response) {
+        try{
+            const bloodGroupId = req.params.id;
+            const bloodGroup = await bloodGroupService.getBloodGroupById(bloodGroupId);
+            return res.status(201).json(
+                { success: true, data: bloodGroup, message: "Blood Group Fetched" }
+            );
+        } catch(err: Error | any){
+            return res.status(err.statusCode || 500).json(
+                { success: false, message: err.message || "Internal Server Error" }
             )
         }
     }

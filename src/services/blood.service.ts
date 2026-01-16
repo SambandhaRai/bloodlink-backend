@@ -7,4 +7,9 @@ export class BloodGroupService {
         const bloodGroups = await bloodGroupRepository.getAllBloodGroup();
         return bloodGroups;
     }
+
+    async getBloodGroupById(id: string){
+        const bloodGroups = await bloodGroupRepository.getBloodGroupById(id);
+        return bloodGroups;
+    }
 }
