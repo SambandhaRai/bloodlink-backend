@@ -3,7 +3,7 @@ import z from "zod";
 export const UserSchema = z.object ({
     fullName: z.string().trim().min(2, "Full name should be more than 2 characters"),
     phoneNumber: z.string().trim().min(10, "Phone number can't be less than 10").max(10, "Phone number can't be more than 10"),
-    dob: z.date(),
+    dob: z.coerce.date(),
     gender: z.string().trim(),
     bloodId: z.string().trim(),
     healthCondition: z.string().optional(),
