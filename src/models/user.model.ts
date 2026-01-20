@@ -6,7 +6,7 @@ const UserSchema: Schema = new Schema({
     phoneNumber : { type : String, required : true, minLength : 10, maxLength : 10, unique : true},
     dob : { type : Date, required : true },
     gender : { type : String, required : true },
-    bloodGroup : { type : String, required : true },
+    bloodId : { type : String, required : true },
     healthCondition : { type : String },
     email : { type: String, required: true, unique : true},
     password : { type : String, required: true, minLength : 6},
