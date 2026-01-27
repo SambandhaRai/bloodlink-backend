@@ -10,6 +10,7 @@ const UserSchema: Schema = new Schema({
     healthCondition : { type : String },
     email : { type: String, required: true, unique : true},
     password : { type : String, required: true, minLength : 6},
+    profilePicture : { type: String, required : false },
     role: { type : String, enum : ['admin', 'user'], default : 'user' },
 }, {
     timestamps: true,

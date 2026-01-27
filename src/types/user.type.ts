@@ -9,6 +9,7 @@ export const UserSchema = z.object ({
     healthCondition: z.string().optional(),
     email: z.email(),
     password: z.string().trim().min(6, "Password can't be less than 6 characters"),
+    profilePicture: z.string().optional(),
     role: z.enum(['admin','user']).default('user'),
 });
 
