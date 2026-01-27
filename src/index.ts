@@ -8,9 +8,10 @@ import cors from "cors";
 dotenv.config();
 console.log(process.env.PORT);
 
-import authRoutes from "./routes/auth.routes";
-import adminRoutes from "./routes/admin/admin.routes";
-import bloodGroupRoutes from './routes/blood.routes';
+import authRouter from "./routes/auth.routes";
+import adminRouter from "./routes/admin/admin.routes";
+import bloodGroupRouter from './routes/blood.routes';
+import userRouter from "./routes/user.routes";
 
 const app: Application = express();
 
@@ -20,9 +21,10 @@ let corsOptions = {
 app.use(cors(corsOptions));
 
 app.use(bodyParser.json());
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/bloodGroup', bloodGroupRoutes);
+app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/bloodGroup', bloodGroupRouter);
+app.use('/api/user', userRouter);
 
 async function start() {
     await connectDatabase();
