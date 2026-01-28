@@ -4,6 +4,7 @@ import { PORT } from "./config";
 import dotenv from "dotenv";
 import { connectDatabase } from "./database/mongoose";
 import cors from "cors";
+import path from "path";
 
 dotenv.config();
 console.log(process.env.PORT);
@@ -19,6 +20,8 @@ let corsOptions = {
     origin: ["http://localhost:3000", "http://localhost:3003"],
 };
 app.use(cors(corsOptions));
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // static file serving
 
 app.use(bodyParser.json());
 app.use('/api/auth', authRouter);
