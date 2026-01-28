@@ -60,4 +60,34 @@ export class UserController {
             })
         }
     }
+
+    async uploadProfilePicture(req: Request, res: Response) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "User Id not found",
+                });
+            }
+            if (!req.file) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Please upload a file",
+                });
+            }
+            const updatedUser = await userService.uploadProfilePicture(userId, req.file);
+            return res.status(200).json({
+                success: true,
+                data: { profilePicture: updatedUser.profilePicture },
+                message: "Profile picture uploaded successfully",
+            });
+        } catch (err: Error | any) {
+            return res.status(err.statusCode || 500).json({
+                success: false,
+                message: err.message || "Internal Server Error",
+            });
+        }
+    }
+
 }
