@@ -4,6 +4,8 @@ import bcryptjs from "bcryptjs";
 import { HttpError } from "../errors/http-error";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config";
+import fs from "fs";
+import path from "path";
 
 let userRepository = new UserRepository();
 
@@ -83,5 +85,36 @@ export class UserService {
         }
         const updatedUser = await userRepository.updateOneUser(userId, data);
         return updatedUser;
+    }
+
+    async uploadProfilePicture(userId: string, file?: Express.Multer.File) {
+        if(!file) {
+            throw new HttpError(400, "Please upload a file");
+        }
+
+        const fileName = file.filename;
+
+        const user = await userRepository.getUserById(userId);
+        if(!user) {
+            throw new HttpError(404, "User not found");
+        }
+
+        // delete old file if exists
+        const oldFileName = user.profilePicture;
+        if (oldFileName) {
+            const uploadDir = path.join(process.cwd(), "uploads"); 
+            const oldFilePath = path.join(uploadDir, oldFileName);
+
+            if (fs.existsSync(oldFilePath)) {
+            await fs.promises.unlink(oldFilePath);
+            }
+        }
+
+        const updated = await userRepository.uploadProfilePicture(userId, fileName);
+        if (!updated) {
+            throw new HttpError(404, "User not found");
+        }
+
+        return updated;
     }
 }

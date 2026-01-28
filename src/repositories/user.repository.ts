@@ -9,9 +9,17 @@ export interface IUserRepository {
     
     getUserByEmail(email: String): Promise<IUser | null>;
     getUserbyPhoneNumber(phoneNumber: String): Promise<IUser | null>;
+
+    uploadProfilePicture(id: string, profilePicture: string): Promise<IUser | null>;
 }
 
 export class UserRepository implements IUserRepository{
+
+    async uploadProfilePicture(id: string, profilePicture: string): Promise<IUser | null> {
+        const updatedUser = await UserModel.findByIdAndUpdate(id, {profilePicture}, { new : true });
+        return updatedUser;
+    }
+
     async createUser(data: Partial<IUser>): Promise<IUser> {
         const user = new UserModel(data);
         return await user.save();

@@ -16,7 +16,6 @@ export const CreateUserDto = UserSchema.pick(
         healthCondition: true,
         email: true,
         password: true,
-        profilePicture : true
     }
 ).extend(
     {
