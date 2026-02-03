@@ -41,6 +41,7 @@ export const UpdateUserDto = UserSchema.pick(
         healthCondition: true,
         email: true,
         password: true,
+        profilePicture: true
     }
 ).extend({ dob: parseToDate.optional() }).partial();
 export type UpdateUserDto = z.infer<typeof UpdateUserDto>;

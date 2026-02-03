@@ -6,10 +6,11 @@ const UserSchema: Schema = new Schema({
     phoneNumber : { type : String, required : true, minLength : 10, maxLength : 10, unique : true},
     dob : { type : Date, required : true },
     gender : { type : String, required : true },
-    bloodId : { type : String, required : true },
+    bloodId : { type : Schema.Types.ObjectId, ref: "BloodGroup", required: true  },
     healthCondition : { type : String },
     email : { type: String, required: true, unique : true},
     password : { type : String, required: true, minLength : 6},
+    profilePicture : { type: String, required : false },
     role: { type : String, enum : ['admin', 'user'], default : 'user' },
 }, {
     timestamps: true,
