@@ -26,12 +26,12 @@ export class UserRepository implements IUserRepository{
     }
 
     async getAllUsers(): Promise<IUser[]> {
-        const user = await UserModel.find();
+        const user = await UserModel.find({ role: "user" }).populate("bloodId", "bloodGroup");
         return user;
     }
 
     async getUserById(id: String): Promise<IUser | null> {
-        const user = await UserModel.findById(id);
+        const user = await UserModel.findById(id).populate("bloodId", "bloodGroup");
         return user;
     }
 
