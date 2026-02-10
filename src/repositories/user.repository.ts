@@ -1,8 +1,9 @@
+import { QueryFilter } from "mongoose";
 import { IUser, UserModel } from "../models/user.model";
 
 export interface IUserRepository {
     createUser(data: Partial<IUser>): Promise<IUser>;
-    getAllUsers(): Promise<IUser[]>;
+    getAllUsers({ page, size, search }: { page: number, size: number, search?: string }) : Promise<{ users: IUser[], totalUsers: number }>
     getUserById(id: String): Promise<IUser | null>;
     updateOneUser(id: String, data: Partial<IUser>): Promise<IUser | null>;
     deleteOneUser(id: String): Promise<boolean | null>;
@@ -25,9 +26,25 @@ export class UserRepository implements IUserRepository{
         return await user.save();
     }
 
-    async getAllUsers(): Promise<IUser[]> {
-        const user = await UserModel.find({ role: "user" }).populate("bloodId", "bloodGroup");
-        return user;
+    async getAllUsers({ page, size, search }: { page: number, size: number, search?: string }) : Promise<{ users: IUser[], totalUsers: number }> {
+        let filter: QueryFilter<IUser> = {
+            role: "User"
+        };
+        if(search) {
+            filter.$or = [
+                { fullName: { $regex: search, $options: "i" } },
+                { phoneNumber: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+            ]
+        }
+        const [users, totalUsers] = await Promise.all([
+            UserModel.find(filter)
+                .skip((page - 1) * size)
+                .limit(size)
+                .populate("bloodId", "bloodGroup"),
+            UserModel.countDocuments(filter)
+        ]);
+        return { users, totalUsers };
     }
 
     async getUserById(id: String): Promise<IUser | null> {

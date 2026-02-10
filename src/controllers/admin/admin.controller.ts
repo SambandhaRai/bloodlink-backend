@@ -4,6 +4,12 @@ import { AdminService } from "../../services/admin/admin.service";
 import { NextFunction, Request, Response } from "express";
 import z from "zod";
 
+interface QueryParams {
+    page?: string,
+    size?: string;
+    search?: string;
+}
+
 let adminService = new AdminService();
 
 export class AdminUserController {
@@ -70,9 +76,14 @@ export class AdminUserController {
 
     async getAllUsers(req: Request, res: Response) {
         try {
-            const users = await adminService.getAllUsers();
+            const { page, size, search }: QueryParams = req.query;
+            const { users, pagination } = await adminService.getAllUsers({
+                page: page,
+                size: size,
+                search: search
+            });
             return res.status(200).json(
-                { success: true, data: users, message: "Fetched all users successfully"}
+                { success: true, data: users, pagination: pagination, message: "Fetched all users successfully"}
             );
         } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
