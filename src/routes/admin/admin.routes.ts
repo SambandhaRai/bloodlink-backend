@@ -11,6 +11,9 @@ router.use(adminOnlyMiddleware);
 
 router.post('/bloodGroups/create', adminUserController.createBloodGroup);
 
+router.post('/hospital', adminUserController.addHospital);
+router.put('/hospital/:id', adminUserController.updateHospital);
+
 router.get('/users', adminUserController.getAllUsers);
 router.get('/users/:id', adminUserController.getUserById);
 router.put('/users/:id', uploads.single('profilePicture'), adminUserController.updateUser);
