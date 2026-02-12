@@ -28,7 +28,7 @@ export class UserRepository implements IUserRepository{
 
     async getAllUsers({ page, size, search }: { page: number, size: number, search?: string }) : Promise<{ users: IUser[], totalUsers: number }> {
         let filter: QueryFilter<IUser> = {
-            role: "User"
+            role: "user"
         };
         if(search) {
             filter.$or = [
