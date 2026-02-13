@@ -7,6 +7,7 @@ import { JWT_SECRET } from "../config";
 import { sendEmail } from "../config/email";
 import fs from "fs";
 import path from "path";
+import mongoose from "mongoose";
 
 const CLIENT_URL = process.env.CLIENT_URL as string;
 
@@ -38,7 +39,10 @@ export class UserService {
         }
         const hashedPassword = await bcryptjs.hash(data.password, 10); // 10 complexity
         data.password = hashedPassword;
-        const newUser = await userRepository.createUser(data);
+        const newUser = await userRepository.createUser({
+            ...data,
+            bloodId: new mongoose.Types.ObjectId(data.bloodId),
+        } as any);
 
         return newUser;
     }
@@ -86,7 +90,13 @@ export class UserService {
             const hashedPassword = await bcryptjs.hash(data.password, 10);
             data.password = hashedPassword;
         }
-        const updatedUser = await userRepository.updateOneUser(userId, data);
+
+        const payload: any = { ...data };
+        if (data.bloodId) {
+            payload.bloodId = new mongoose.Types.ObjectId(data.bloodId);
+        }
+
+        const updatedUser = await userRepository.updateOneUser(userId, payload);
         return updatedUser;
     }
 

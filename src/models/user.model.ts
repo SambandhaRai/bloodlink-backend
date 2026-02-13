@@ -16,10 +16,11 @@ const UserSchema: Schema = new Schema({
     timestamps: true,
 });
 
-export interface IUser extends UserType, Document {
-    _id: mongoose.Types.ObjectId,
-    createdAt: Date,
-    updatedAt: Date,
+export interface IUser extends Omit<UserType, "bloodId">, Document {
+    _id: mongoose.Types.ObjectId;
+    bloodId: mongoose.Types.ObjectId;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 export const UserModel = mongoose.model<IUser>("User", UserSchema);

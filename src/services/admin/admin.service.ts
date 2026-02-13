@@ -5,6 +5,7 @@ import { HttpError } from "../../errors/http-error";
 import { UpdateUserDto } from "../../dtos/user.dto";
 import { CreateHospitalDto, UpdateHospitalDto } from "../../dtos/hospital.dto";
 import { HospitalRepository } from "../../repositories/hospital.repository";
+import mongoose from "mongoose";
 
 let hospitalRepository = new HospitalRepository();
 let bloodGroupRepository = new BloodGroupRepository();
@@ -61,7 +62,15 @@ export class AdminService {
         if(!user) {
             throw new HttpError(404, "User not found");
         }
-        const updatedUser = await userRepository.updateOneUser(id, data);
+        const payload: any = { ...data };
+
+        if (data.bloodId) {
+            if (!mongoose.Types.ObjectId.isValid(data.bloodId)) {
+                throw new HttpError(400, "Invalid bloodId");
+            }
+            payload.bloodId = new mongoose.Types.ObjectId(data.bloodId);
+        }
+        const updatedUser = await userRepository.updateOneUser(id, payload);
         return updatedUser;
     }
 
