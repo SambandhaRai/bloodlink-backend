@@ -1,8 +1,15 @@
 import { CreateBloodGroupDto } from "../../dtos/blood.dto";
+import { CreateHospitalDto, UpdateHospitalDto } from "../../dtos/hospital.dto";
 import { UpdateUserDto } from "../../dtos/user.dto";
 import { AdminService } from "../../services/admin/admin.service";
 import { NextFunction, Request, Response } from "express";
 import z from "zod";
+
+interface QueryParams {
+    page?: string,
+    size?: string;
+    search?: string;
+}
 
 let adminService = new AdminService();
 
@@ -25,6 +32,46 @@ export class AdminUserController {
             );
         }
     }
+
+    async addHospital(req: Request, res: Response) {
+        try {
+            const parsedData = CreateHospitalDto.safeParse(req.body);
+            if(!parsedData.success) {
+                return res.status(400).json(
+                    { success: false, errors: z.prettifyError(parsedData.error) }
+                )
+            }
+            const newHospital = await adminService.addHospital(parsedData.data);
+            return res.status(201).json(
+                { success: true, data: newHospital, message: "Hospital created successfully" }
+            );
+        } catch(err: Error | any){
+            return res.status(err.statusCode || 500).json(
+                { success: false, message: err.message || "Internal Server Error" }
+            );
+        }
+    }
+
+    async updateHospital(req: Request, res: Response) {
+        try {
+            const hospitalId = req.params.id;
+            const parsedData = UpdateHospitalDto.safeParse(req.body);
+            if (!parsedData.success) {
+                return res.status(400).json(
+                    { success: false, errors: z.prettifyError(parsedData.error), }
+                );
+            }
+            const updatedhospital = await adminService.updateHospital(hospitalId, parsedData.data);
+            return res.status(200).json(
+                { success: true, data: updatedhospital, message: "Hospital updated successfully", }
+            );
+        } catch (err: Error | any) {
+            return res.status(err.statusCode || 500).json(
+                { success: false, message: err.message || "Internal Server Error" }
+            );
+        }
+    }
+        
 
     async updateUser(req: Request, res: Response, next: NextFunction) {
         try{
@@ -70,9 +117,14 @@ export class AdminUserController {
 
     async getAllUsers(req: Request, res: Response) {
         try {
-            const users = await adminService.getAllUsers();
+            const { page, size, search }: QueryParams = req.query;
+            const { users, pagination } = await adminService.getAllUsers({
+                page: page,
+                size: size,
+                search: search
+            });
             return res.status(200).json(
-                { success: true, data: users, message: "Fetched all users successfully"}
+                { success: true, data: users, pagination: pagination, message: "Fetched all users successfully"}
             );
         } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(

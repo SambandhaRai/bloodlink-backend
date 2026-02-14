@@ -4,8 +4,12 @@ import bcryptjs from "bcryptjs";
 import { HttpError } from "../errors/http-error";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config";
+import { sendEmail } from "../config/email";
 import fs from "fs";
 import path from "path";
+import mongoose from "mongoose";
+
+const CLIENT_URL = process.env.CLIENT_URL as string;
 
 let userRepository = new UserRepository();
 
@@ -35,7 +39,10 @@ export class UserService {
         }
         const hashedPassword = await bcryptjs.hash(data.password, 10); // 10 complexity
         data.password = hashedPassword;
-        const newUser = await userRepository.createUser(data);
+        const newUser = await userRepository.createUser({
+            ...data,
+            bloodId: new mongoose.Types.ObjectId(data.bloodId),
+        } as any);
 
         return newUser;
     }
@@ -83,7 +90,13 @@ export class UserService {
             const hashedPassword = await bcryptjs.hash(data.password, 10);
             data.password = hashedPassword;
         }
-        const updatedUser = await userRepository.updateOneUser(userId, data);
+
+        const payload: any = { ...data };
+        if (data.bloodId) {
+            payload.bloodId = new mongoose.Types.ObjectId(data.bloodId);
+        }
+
+        const updatedUser = await userRepository.updateOneUser(userId, payload);
         return updatedUser;
     }
 
@@ -116,5 +129,88 @@ export class UserService {
         }
 
         return updated;
+    }
+
+    async sendResetPasswordEmail(email?: string) {
+        if(!email) {
+            throw new HttpError(400, "Email is required");
+        }
+        const user = await userRepository.getUserByEmail(email);
+        if(!user) {
+            throw new HttpError(404, "User not found");
+        }
+        const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: "1h" });
+        const resetLink = `${CLIENT_URL}/reset-password?token=${token}`;
+        const html = `
+            <div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;background:#ffffff;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+            
+            <!-- Header -->
+            <div style="background:#A72636;color:#ffffff;padding:20px;text-align:center;">
+                <h2 style="margin:0;font-size:22px;">Reset Your Password</h2>
+            </div>
+
+            <!-- Body -->
+            <div style="padding:24px;color:#333333;line-height:1.6;">
+                <p style="margin-top:0;">
+                    We received a request to reset your account password.
+                </p>
+
+                <p>
+                    Click the button below to set a new password. This link will expire in
+                    <strong>1 hour</strong>.
+                </p>
+
+                <!-- Button -->
+                <div style="text-align:center;margin:32px 0;">
+                <a
+                    href="${resetLink}"
+                    style="
+                    background:#A72636;
+                    color:#ffffff;
+                    text-decoration:none;
+                    padding:14px 28px;
+                    border-radius:6px;
+                    display:inline-block;
+                    font-weight:bold;
+                    "
+                >
+                    Reset Password
+                </a>
+                </div>
+
+                <p style="font-size:14px;color:#555;">
+                    If you did not request a password reset, you can safely ignore this email.
+                </p>
+            </div>
+
+            <!-- Footer -->
+            <div style="background:#f7f7f7;padding:16px;text-align:center;font-size:12px;color:#777;">
+                © ${new Date().getFullYear()} Blood Link. All rights reserved.
+            </div>
+
+            </div>
+        `;
+
+        await sendEmail(user.email, "Password Reset", html);
+        return user;
+    }
+
+    async resetPassword(token?: string, newPassword?: string) {
+        try{
+            if(!token || !newPassword) {
+                throw new HttpError(400, "Token and new password are required");
+            }
+            const decoded: any = jwt.verify(token, JWT_SECRET);
+            const userId = decoded.id;
+            const user = await userRepository.getUserById(userId);
+            if(!user) {
+                throw new HttpError(404, "User not found");
+            }
+            const hashedPassword = await bcryptjs.hash(newPassword, 10);
+            await userRepository.updateOneUser(userId, { password: hashedPassword });
+            return user;
+        } catch (error) {
+            throw new HttpError(400, "Invalid or expired token");
+        }
     }
 }

@@ -3,7 +3,11 @@ import { BloodGroupRepository } from "../../repositories/blood.repository";
 import { UserRepository } from "../../repositories/user.repository";
 import { HttpError } from "../../errors/http-error";
 import { UpdateUserDto } from "../../dtos/user.dto";
+import { CreateHospitalDto, UpdateHospitalDto } from "../../dtos/hospital.dto";
+import { HospitalRepository } from "../../repositories/hospital.repository";
+import mongoose from "mongoose";
 
+let hospitalRepository = new HospitalRepository();
 let bloodGroupRepository = new BloodGroupRepository();
 let userRepository = new UserRepository();
 
@@ -17,9 +21,32 @@ export class AdminService {
         return newBloodGroup;
     }
 
-    async getAllUsers() {
-        const users = await userRepository.getAllUsers();
-        return users;
+    async addHospital(data: CreateHospitalDto) {
+        const newHospital = await hospitalRepository.addHospital(data);
+        return newHospital;
+    }
+
+    async updateHospital(hospitalId: string, data: UpdateHospitalDto) {
+        const hospital = await hospitalRepository.getHospitalById(hospitalId);
+        if(!hospital) {
+            throw new HttpError(404, "Hospital not found");
+        }
+        const updatedHospital = await hospitalRepository.updateHospital(hospitalId, data);
+        return updatedHospital;
+    }
+
+    async getAllUsers({ page, size, search }: { page?: string | undefined, size?: string | undefined, search?: string | undefined }) {
+        const currentPage = page ? parseInt(page) : 1;
+        const currentSize = size ? parseInt(size) : 10;
+        const currentSearch = search || "";
+        const { users, totalUsers } = await userRepository.getAllUsers({ page: currentPage, size: currentSize, search: currentSearch });
+        const pagination = {
+            page: currentPage, 
+            size: currentSize,
+            total: totalUsers,
+            totalPages: Math.ceil(totalUsers / currentSize),
+        }
+        return { users, pagination };
     }
 
     async getUserById(id: string) {
@@ -35,7 +62,15 @@ export class AdminService {
         if(!user) {
             throw new HttpError(404, "User not found");
         }
-        const updatedUser = await userRepository.updateOneUser(id, data);
+        const payload: any = { ...data };
+
+        if (data.bloodId) {
+            if (!mongoose.Types.ObjectId.isValid(data.bloodId)) {
+                throw new HttpError(400, "Invalid bloodId");
+            }
+            payload.bloodId = new mongoose.Types.ObjectId(data.bloodId);
+        }
+        const updatedUser = await userRepository.updateOneUser(id, payload);
         return updatedUser;
     }
 
