@@ -6,8 +6,8 @@ import { HttpError } from "../errors/http-error";
 let requestRepository = new RequestRepository();
 
 export class RequestService {
-    async createRequest(data: CreateRequestDto, recipientId: string) {
-        if (!mongoose.Types.ObjectId.isValid(recipientId)) {
+    async createRequest(data: CreateRequestDto, postedBy: string) {
+        if (!mongoose.Types.ObjectId.isValid(postedBy)) {
             throw new HttpError(401, "Unauthorized");
         }
 
@@ -19,12 +19,39 @@ export class RequestService {
             throw new HttpError(400, "Invalid hospitalId");
         }
 
+        if (data.requestFor === "others") {
+            if (!data.relationToPatient || data.relationToPatient.trim().length < 2) {
+                throw new HttpError(400, "relationToPatient is required when requestFor is 'others'");
+            }
+            if (!data.patientName || data.patientName.trim().length < 2) {
+                throw new HttpError(400, "patientName is required when requestFor is 'others'");
+            }
+            if (!data.patientPhone || data.patientPhone.trim().length < 6) {
+                throw new HttpError(400, "patientPhone is required when requestFor is 'others'");
+            }
+        }
+
+        const cleanPatientFields =
+            data.requestFor === "self"
+                ? {
+                    relationToPatient: undefined,
+                    patientName: undefined,
+                    patientPhone: undefined,
+                }
+                : {
+                    relationToPatient: data.relationToPatient?.trim(),
+                    patientName: data.patientName?.trim(),
+                    patientPhone: data.patientPhone?.trim(),
+                };
+
         const newRequest = await requestRepository.createRequest({
             recipientBloodId: new mongoose.Types.ObjectId(data.recipientBloodId),
             recipientDetails: data.recipientDetails,
             recipientCondition: data.recipientCondition,
             hospitalId: new mongoose.Types.ObjectId(data.hospitalId),
-            recipientId: new mongoose.Types.ObjectId(recipientId),
+            postedBy: new mongoose.Types.ObjectId(postedBy),
+            requestFor: data.requestFor,
+            ...cleanPatientFields,
         });
 
         return newRequest;

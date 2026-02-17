@@ -6,7 +6,7 @@ import { HospitalModel } from "../models/hospital.model";
 
 export interface IRequestRepostory {
     createRequest(data: Partial<IRequest>): Promise<IRequest>;
-    getAllRequests({ page, size, search } : { page: number, size: number, search?: string }) : Promise<{ requests: IRequest[], totalRequests: number }>;
+    getAllRequests({ page, size, search }: { page: number, size: number, search?: string }): Promise<{ requests: IRequest[], totalRequests: number }>;
 }
 
 export class RequestRepository implements IRequestRepostory {
@@ -17,11 +17,11 @@ export class RequestRepository implements IRequestRepostory {
 
             const users = await UserModel.find(
                 {
-                $or: [
-                    { fullName: { $regex: regex } },
-                    { phoneNumber: { $regex: regex } },
-                    { email: { $regex: regex } },
-                ],
+                    $or: [
+                        { fullName: { $regex: regex } },
+                        { phoneNumber: { $regex: regex } },
+                        { email: { $regex: regex } },
+                    ],
                 },
                 { _id: 1 }
             );
@@ -37,9 +37,12 @@ export class RequestRepository implements IRequestRepostory {
             );
 
             filter.$or = [
-                { recipientId: { $in: users.map(u => u._id) } },
-                { recipientBloodId: { $in: bloods.map(b => b._id) } },
-                { hospitalId: { $in: hospitals.map(h => h._id) } },
+                { postedBy: { $in: users.map((user) => user._id) } },
+                { recipientBloodId: { $in: bloods.map((blood) => blood._id) } },
+                { hospitalId: { $in: hospitals.map((hospital) => hospital._id) } },
+                { patientName: { $regex: regex } },
+                { patientPhone: { $regex: regex } },
+                { relationToPatient: { $regex: regex } },
             ];
         }
         const [requests, totalRequests] = await Promise.all([
@@ -47,15 +50,15 @@ export class RequestRepository implements IRequestRepostory {
                 .skip((page - 1) * size)
                 .limit(size)
                 .populate({
-                    path:"recipientBloodId",
+                    path: "recipientBloodId",
                     select: "bloodGroup"
                 })
                 .populate({
-                    path:"hospitalId",
+                    path: "hospitalId",
                     select: "name location"
                 })
                 .populate({
-                    path: "recipientId", 
+                    path: "postedBy",
                     select: "fullName phoneNumber email bloodId",
                     populate: {
                         path: "bloodId",
@@ -71,5 +74,4 @@ export class RequestRepository implements IRequestRepostory {
         const request = new RequestModel(data);
         return await request.save();
     }
-    
 }
