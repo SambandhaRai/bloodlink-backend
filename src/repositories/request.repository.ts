@@ -59,7 +59,7 @@ export class RequestRepository implements IRequestRepostory {
                 })
                 .populate({
                     path: "postedBy",
-                    select: "fullName phoneNumber email bloodId",
+                    select: "fullName phoneNumber email profilePicture bloodId",
                     populate: {
                         path: "bloodId",
                         select: "bloodGroup"
