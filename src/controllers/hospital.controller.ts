@@ -5,7 +5,7 @@ import z from "zod";
 
 interface QueryParams {
     page?: string,
-    size?: string, 
+    size?: string,
     search?: string,
     isActive?: string;
 };
@@ -38,11 +38,11 @@ export class HospitalController {
                 isActive: isActive
             });
             return res.status(200).json(
-                { success: true, data: hospitals, pagination: pagination, message: "Fetched all Hospitals successfully"}
+                { success: true, data: hospitals, pagination: pagination, message: "Fetched all Hospitals successfully" }
             );
         } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
-                { success: false, message: err.message || "Internal server error"}
+                { success: false, message: err.message || "Internal server error" }
             );
         }
     }

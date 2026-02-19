@@ -47,6 +47,7 @@ export class RequestRepository implements IRequestRepostory {
         }
         const [requests, totalRequests] = await Promise.all([
             RequestModel.find(filter)
+                .sort({ createdAt: -1 })
                 .skip((page - 1) * size)
                 .limit(size)
                 .populate({

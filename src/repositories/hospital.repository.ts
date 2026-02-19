@@ -4,7 +4,7 @@ import { IHospital, HospitalModel } from "../models/hospital.model";
 export interface IHospitalRepository {
     addHospital(data: Partial<IHospital>): Promise<IHospital>;
     updateHospital(id: String, data: Partial<IHospital>): Promise<IHospital | null>;
-    getAllHospitals({ page, size, search } : { page: number, size: number, search?: string }) : Promise<{ hospitals: IHospital[], totalHospitals: number }>;
+    getAllHospitals({ page, size, search }: { page: number, size: number, search?: string }): Promise<{ hospitals: IHospital[], totalHospitals: number }>;
     getHospitalById(id: String): Promise<IHospital | null>;
 }
 
@@ -16,16 +16,16 @@ export class HospitalRepository implements IHospitalRepository {
     }
 
     async updateHospital(id: String, data: Partial<IHospital>): Promise<IHospital | null> {
-        const updatedHospital = await HospitalModel.findByIdAndUpdate(id, data, {new: true});
+        const updatedHospital = await HospitalModel.findByIdAndUpdate(id, data, { new: true });
         return updatedHospital;
     }
-    
+
     async getAllHospitals({ page, size, search, isActive }: { page: number; size: number; search?: string; isActive?: boolean; }): Promise<{ hospitals: IHospital[]; totalHospitals: number; }> {
         let filter: QueryFilter<IHospital> = {};
         if (typeof isActive === "boolean") {
             filter.isActive = isActive;
         }
-        if(search) {
+        if (search) {
             filter.$or = [
                 { name: { $regex: search, $options: "i" } },
             ]

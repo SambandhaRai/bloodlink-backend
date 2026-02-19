@@ -15,9 +15,9 @@ let adminService = new AdminService();
 
 export class AdminUserController {
     async createBloodGroup(req: Request, res: Response) {
-        try{
+        try {
             const parsedData = CreateBloodGroupDto.safeParse(req.body);
-            if(!parsedData.success){
+            if (!parsedData.success) {
                 return res.status(400).json(
                     { success: false, errors: z.prettifyError(parsedData.error) }
                 );
@@ -26,7 +26,7 @@ export class AdminUserController {
             return res.status(201).json(
                 { success: true, data: newBloodGroup }
             );
-        } catch(err: Error | any) {
+        } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
                 { success: false, message: err.message || "Internal Server Error" }
             );
@@ -36,7 +36,7 @@ export class AdminUserController {
     async addHospital(req: Request, res: Response) {
         try {
             const parsedData = CreateHospitalDto.safeParse(req.body);
-            if(!parsedData.success) {
+            if (!parsedData.success) {
                 return res.status(400).json(
                     { success: false, errors: z.prettifyError(parsedData.error) }
                 )
@@ -45,7 +45,7 @@ export class AdminUserController {
             return res.status(201).json(
                 { success: true, data: newHospital, message: "Hospital created successfully" }
             );
-        } catch(err: Error | any){
+        } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
                 { success: false, message: err.message || "Internal Server Error" }
             );
@@ -71,33 +71,33 @@ export class AdminUserController {
             );
         }
     }
-        
+
 
     async updateUser(req: Request, res: Response, next: NextFunction) {
-        try{
+        try {
             const userId = req.params.id;
             const parsedData = UpdateUserDto.safeParse(req.body);
-            if(!parsedData.success) {
+            if (!parsedData.success) {
                 return res.status(400).json({
                     success: false, errors: z.prettifyError(parsedData.error)
                 });
             }
-            if(req.file) {
+            if (req.file) {
                 parsedData.data.profilePicture = `/uploads/${req.file.filename}`;
             }
             const updatedUser = await adminService.updateUser(userId, parsedData.data);
             return res.status(200).json(
-                { success: true, data: updatedUser, message: "User updated successfully"}
+                { success: true, data: updatedUser, message: "User updated successfully" }
             );
         } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
-                { success: false, message: err.message || "Internal server error"}
+                { success: false, message: err.message || "Internal server error" }
             );
         }
     }
 
     async deleteUser(req: Request, res: Response) {
-        try{
+        try {
             const userId = req.params.id;
             const deletedUser = await adminService.deleteUser(userId);
             if (!deletedUser) {
@@ -106,11 +106,11 @@ export class AdminUserController {
                 );
             }
             return res.status(200).json(
-                { success: true, message: "User deleted successfully"}
+                { success: true, message: "User deleted successfully" }
             );
         } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
-                { success: false, message: err.message || "Internal server error"}
+                { success: false, message: err.message || "Internal server error" }
             );
         }
     }
@@ -124,11 +124,11 @@ export class AdminUserController {
                 search: search
             });
             return res.status(200).json(
-                { success: true, data: users, pagination: pagination, message: "Fetched all users successfully"}
+                { success: true, data: users, pagination: pagination, message: "Fetched all users successfully" }
             );
         } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
-                { success: false, message: err.message || "Internal server error"}
+                { success: false, message: err.message || "Internal server error" }
             );
         }
     }

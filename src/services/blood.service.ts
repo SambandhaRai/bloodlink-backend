@@ -3,12 +3,12 @@ import { BloodGroupRepository } from "../repositories/blood.repository";
 let bloodGroupRepository = new BloodGroupRepository();
 
 export class BloodGroupService {
-    async getAllBloodGroups(){
+    async getAllBloodGroups() {
         const bloodGroups = await bloodGroupRepository.getAllBloodGroup();
         return bloodGroups;
     }
 
-    async getBloodGroupById(id: string){
+    async getBloodGroupById(id: string) {
         const bloodGroups = await bloodGroupRepository.getBloodGroupById(id);
         return bloodGroups;
     }

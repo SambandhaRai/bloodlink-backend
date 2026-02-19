@@ -8,7 +8,7 @@ export class HospitalService {
 
     async getHospitalById(hospitalId: String) {
         const hospital = await hospitalRepository.getHospitalById(hospitalId);
-        if(!hospital) {
+        if (!hospital) {
             throw new HttpError(404, "Hospital not found");
         }
         return hospital;
