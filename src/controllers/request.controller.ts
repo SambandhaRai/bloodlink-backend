@@ -49,4 +49,36 @@ export class RequestController {
             );
         }
     }
+
+    async getRequestById(req: Request, res: Response) {
+        try {
+            const requestId = req.params.id;
+            const request = await requestService.getRequestById(requestId);
+            return res.status(200).json(
+                { success: true, data: request, message: "Fetched single request successfully" }
+            );
+        } catch (err: Error | any) {
+            return res.status(err.statusCode ?? 500).json(
+                { success: false, message: err.message || "Internal Server Error" }
+            );
+        }
+    }
+
+    async acceptRequest(req: Request, res: Response) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+            const requestId = req.params.id;
+            const updated = await requestService.acceptRequest(requestId, String(userId));
+            return res.status(200).json(
+                { success: true, data: updated, message: "Request accepted successfully" }
+            );
+        } catch (err: Error | any) {
+            return res.status(err.statusCode || 500).json(
+                { success: false, message: err.message || "Internal Server Error", }
+            );
+        }
+    }
 }

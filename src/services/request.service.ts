@@ -70,4 +70,42 @@ export class RequestService {
         }
         return { requests, pagination };
     }
+
+    async getRequestById(id: string) {
+        const request = await requestRepository.getRequestById(id);
+        if (!request) {
+            throw new HttpError(404, "Request not found");
+        }
+        return request;
+    }
+
+    async acceptRequest(requestId: string, donorId: string) {
+        if (!mongoose.Types.ObjectId.isValid(donorId)) {
+            throw new HttpError(401, "Unauthorized");
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(requestId)) {
+            throw new HttpError(401, "Invalid Request Id");
+        }
+
+        const currentRequest = await requestRepository.getRequestById(requestId);
+        if (!currentRequest) {
+            throw new HttpError(404, "Request not found");
+        }
+
+        if (currentRequest.requestStatus !== "pending") {
+            throw new HttpError(400, `Request already ${currentRequest.requestStatus}`);
+        }
+
+        // Cannot accept own request
+        if (String(currentRequest.postedBy?._id || currentRequest.postedBy) === String(donorId)) {
+            throw new HttpError(400, "You cannot accept your own request");
+        }
+
+        const updated = await requestRepository.acceptRequest(
+            requestId,
+            new mongoose.Types.ObjectId(donorId)
+        );
+        return updated;
+    }
 }
