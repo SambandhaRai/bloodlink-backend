@@ -1,4 +1,4 @@
-import { QueryFilter } from "mongoose";
+import mongoose, { QueryFilter } from "mongoose";
 import { IUser, UserModel } from "../models/user.model";
 
 export interface IUserRepository {
@@ -12,6 +12,9 @@ export interface IUserRepository {
     getUserbyPhoneNumber(phoneNumber: String): Promise<IUser | null>;
 
     uploadProfilePicture(id: string, profilePicture: string): Promise<IUser | null>;
+
+    lockDonorActiveRequest(userId: string, requestId: string): Promise<IUser | null>;
+    unlockDonorActiveRequest(userId: string, requestId: string): Promise<IUser | null>;
 }
 
 export class UserRepository implements IUserRepository {
@@ -72,5 +75,20 @@ export class UserRepository implements IUserRepository {
         return user;
     }
 
+    async lockDonorActiveRequest(userId: string, requestId: string) {
+        return await UserModel.findOneAndUpdate(
+            { _id: userId, activeAcceptedRequestId: null }, // only if not locked
+            { $set: { activeAcceptedRequestId: new mongoose.Types.ObjectId(requestId) } },
+            { new: true }
+        );
+    }
+
+    async unlockDonorActiveRequest(userId: string, requestId: string) {
+        return await UserModel.findOneAndUpdate(
+            { _id: userId, activeAcceptedRequestId: new mongoose.Types.ObjectId(requestId) },
+            { $set: { activeAcceptedRequestId: null } },
+            { new: true }
+        );
+    }
 
 }
