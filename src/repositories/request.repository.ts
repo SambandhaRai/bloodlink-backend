@@ -6,14 +6,57 @@ import { HospitalModel } from "../models/hospital.model";
 
 export interface IRequestRepostory {
     createRequest(data: Partial<IRequest>): Promise<IRequest>;
-    getAllRequests({ page, size, search }: { page: number, size: number, search?: string }): Promise<{ requests: IRequest[], totalRequests: number }>;
+    getAllPendingRequests({ page, size, search }: { page: number, size: number, search?: string }): Promise<{ requests: IRequest[], totalRequests: number }>;
     getRequestById(id: String): Promise<IRequest | null>;
 
     acceptRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null>;
+    finishRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null>;
+
+    getUserHistory(userId: mongoose.Types.ObjectId): Promise<{
+        donated: IRequest[];
+        ongoing: { requestedOngoing: IRequest[]; donationOngoing: IRequest[] };
+        received: IRequest[];
+    }>;
 }
 
 export class RequestRepository implements IRequestRepostory {
-    async getAllRequests({ page, size, search }: { page: number; size: number; search?: string; }): Promise<{ requests: IRequest[]; totalRequests: number; }> {
+    async getUserHistory(userId: mongoose.Types.ObjectId) {
+        const basePopulate = [
+            { path: "recipientBloodId", select: "bloodGroup" },
+            { path: "hospitalId", select: "name location" },
+            {
+                path: "postedBy",
+                select: "fullName phoneNumber email profilePicture bloodId",
+                populate: { path: "bloodId", select: "bloodGroup" },
+            },
+            {
+                path: "donorId",
+                select: "fullName phoneNumber email profilePicture bloodId",
+                populate: { path: "bloodId", select: "bloodGroup" },
+            },
+        ];
+
+        const [donated, requestedOngoing, donationOngoing, received] = await Promise.all([
+            RequestModel.find({ donorId: userId, requestStatus: "finished" })
+                .sort({ updatedAt: -1 })
+                .populate(basePopulate),
+
+            RequestModel.find({ postedBy: userId, requestStatus: { $in: ["pending", "accepted"] } })
+                .sort({ createdAt: -1 })
+                .populate(basePopulate),
+            RequestModel.find({ donorId: userId, requestStatus: "accepted" })
+                .sort({ updatedAt: -1 })
+                .populate(basePopulate),
+
+            RequestModel.find({ postedBy: userId, requestStatus: "finished" })
+                .sort({ updatedAt: -1 })
+                .populate(basePopulate),
+        ]);
+
+        return { donated, ongoing: { requestedOngoing, donationOngoing }, received };
+    }
+
+    async getAllPendingRequests({ page, size, search }: { page: number; size: number; search?: string; }): Promise<{ requests: IRequest[]; totalRequests: number; }> {
         let filter: QueryFilter<IRequest> = {
             "requestStatus": "pending"
         };
@@ -32,7 +75,7 @@ export class RequestRepository implements IRequestRepostory {
             );
 
             const bloods = await BloodGroupModel.find(
-                { bloodGroup: { $regex: regex } },
+                { bloodGroup: { $regex: search } },
                 { _id: 1 }
             );
 
@@ -46,8 +89,6 @@ export class RequestRepository implements IRequestRepostory {
                 { recipientBloodId: { $in: bloods.map((blood) => blood._id) } },
                 { hospitalId: { $in: hospitals.map((hospital) => hospital._id) } },
                 { patientName: { $regex: regex } },
-                { patientPhone: { $regex: regex } },
-                { relationToPatient: { $regex: regex } },
             ];
         }
         const [requests, totalRequests] = await Promise.all([
@@ -98,12 +139,17 @@ export class RequestRepository implements IRequestRepostory {
                     path: "bloodId",
                     select: "bloodGroup"
                 }
+            })
+            .populate({
+                path: "donorId",
+                select: "fullName phoneNumber email profilePicture bloodId",
+                populate: { path: "bloodId", select: "bloodGroup" },
             });
         return request;
     }
 
     async acceptRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null> {
-        const updatedRequest = await RequestModel.findByIdAndUpdate(
+        const updatedRequest = await RequestModel.findOneAndUpdate(
             { _id: requestId, requestStatus: "pending" },
             { $set: { requestStatus: "accepted", donorId } },
             { new: true }
@@ -116,5 +162,26 @@ export class RequestRepository implements IRequestRepostory {
                 populate: { path: "bloodId", select: "bloodGroup" },
             });
         return updatedRequest;
+    }
+
+    async finishRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null> {
+        const finished = await RequestModel.findOneAndUpdate(
+            { _id: requestId, requestStatus: "accepted", donorId },
+            { $set: { requestStatus: "finished" } },
+            { new: true }
+        ).populate({ path: "recipientBloodId", select: "bloodGroup" })
+            .populate({ path: "hospitalId", select: "name location" })
+            .populate({
+                path: "postedBy",
+                select: "fullName phoneNumber email profilePicture bloodId",
+                populate: { path: "bloodId", select: "bloodGroup" },
+            })
+            .populate({
+                path: "donorId",
+                select: "fullName phoneNumber email profilePicture bloodId",
+                populate: { path: "bloodId", select: "bloodGroup" },
+            });
+
+        return finished;
     }
 }

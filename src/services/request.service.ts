@@ -2,8 +2,10 @@ import mongoose from "mongoose";
 import { CreateRequestDto } from "../dtos/request.dto";
 import { RequestRepository } from "../repositories/request.repository";
 import { HttpError } from "../errors/http-error";
+import { UserRepository } from "../repositories/user.repository";
 
 let requestRepository = new RequestRepository();
+let userRepository = new UserRepository();
 
 export class RequestService {
     async createRequest(data: CreateRequestDto, postedBy: string) {
@@ -57,11 +59,11 @@ export class RequestService {
         return newRequest;
     }
 
-    async getAllRequests({ page, size, search }: { page?: string | undefined, size?: string | undefined, search?: string | undefined }) {
+    async getAllPendingRequests({ page, size, search }: { page?: string | undefined, size?: string | undefined, search?: string | undefined }) {
         const currentPage = page ? parseInt(page) : 1;
         const currentSize = size ? parseInt(size) : 10;
         const currentSearch = search || "";
-        const { requests, totalRequests } = await requestRepository.getAllRequests({ page: currentPage, size: currentSize, search: currentSearch });
+        const { requests, totalRequests } = await requestRepository.getAllPendingRequests({ page: currentPage, size: currentSize, search: currentSearch });
         const pagination = {
             page: currentPage,
             size: currentSize,
@@ -77,6 +79,13 @@ export class RequestService {
             throw new HttpError(404, "Request not found");
         }
         return request;
+    }
+
+    async getUserHistory(userId: string) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new HttpError(401, "Unauthorized");
+        }
+        return await requestRepository.getUserHistory(new mongoose.Types.ObjectId(userId));
     }
 
     async acceptRequest(requestId: string, donorId: string) {
@@ -99,13 +108,53 @@ export class RequestService {
 
         // Cannot accept own request
         if (String(currentRequest.postedBy?._id || currentRequest.postedBy) === String(donorId)) {
-            throw new HttpError(400, "You cannot accept your own request");
+            throw new HttpError(400, "Cannot accept your own request");
         }
 
+        // Lock donor (only 1 active request)
+        const locked = await userRepository.lockDonorActiveRequest(donorId, requestId);
+        if (!locked) {
+            throw new HttpError(400, "Cannot accept multiple requests at once.");
+        }
+        // Accept the request
         const updated = await requestRepository.acceptRequest(
             requestId,
             new mongoose.Types.ObjectId(donorId)
         );
+        if (!updated) {
+            // rollback lock if request was already accepted
+            await userRepository.unlockDonorActiveRequest(donorId, requestId);
+            throw new HttpError(400, "This request has already been accepted by someone else.");
+        }
+
         return updated;
+    }
+
+    async finishRequest(requestId: string, donorId: string) {
+        if (!mongoose.Types.ObjectId.isValid(donorId)) {
+            throw new HttpError(401, "Unauthorized");
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(requestId)) {
+            throw new HttpError(400, "Invalid Request Id");
+        }
+
+        const current = await requestRepository.getRequestById(requestId);
+        if (!current) {
+            throw new HttpError(404, "Request not found")
+        };
+
+        const currentDonorId = String(current.donorId?._id || current.donorId || "");
+        if (currentDonorId !== String(donorId)) {
+            throw new HttpError(403, "Only the donor who accepted this request can finish it");
+        }
+
+        const finished = await requestRepository.finishRequest(
+            requestId,
+            new mongoose.Types.ObjectId(donorId)
+        );
+
+        await userRepository.unlockDonorActiveRequest(donorId, requestId);
+        return finished;
     }
 }

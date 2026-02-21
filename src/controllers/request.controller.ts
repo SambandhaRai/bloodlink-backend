@@ -32,16 +32,37 @@ export class RequestController {
         }
     }
 
-    async getAllRequests(req: Request, res: Response) {
+    async getUserHistory(req: Request, res: Response) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
+
+            const data = await requestService.getUserHistory(String(userId));
+            return res.status(200).json({
+                success: true,
+                data,
+                message: "User history fetched successfully",
+            });
+        } catch (err: any) {
+            return res.status(err.statusCode || 500).json({
+                success: false,
+                message: err.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async getAllPendingRequests(req: Request, res: Response) {
         try {
             const { page, size, search }: QueryParams = req.query;
-            const { requests, pagination } = await requestService.getAllRequests({
+            const { requests, pagination } = await requestService.getAllPendingRequests({
                 page: page,
                 size: size,
                 search: search
             });
             return res.status(200).json(
-                { success: true, data: requests, pagination: pagination, message: "Requests Fetched Successfully" }
+                { success: true, data: requests, pagination: pagination, message: "Pending Requests Fetched Successfully" }
             );
         } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
@@ -68,7 +89,9 @@ export class RequestController {
         try {
             const userId = req.user?._id;
             if (!userId) {
-                return res.status(401).json({ success: false, message: "Unauthorized" });
+                return res.status(401).json(
+                    { success: false, message: "Unauthorized" }
+                );
             }
             const requestId = req.params.id;
             const updated = await requestService.acceptRequest(requestId, String(userId));
@@ -78,6 +101,26 @@ export class RequestController {
         } catch (err: Error | any) {
             return res.status(err.statusCode || 500).json(
                 { success: false, message: err.message || "Internal Server Error", }
+            );
+        }
+    }
+
+    async finishRequest(req: Request, res: Response) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).json(
+                    { success: false, message: "Unauthorized" }
+                );
+            }
+            const requestId = req.params.id;
+            const finished = await requestService.finishRequest(requestId, String(userId));
+            return res.status(200).json(
+                { success: true, data: finished, message: "Request finished successfully" }
+            );
+        } catch (err: any) {
+            return res.status(err.statusCode || 500).json(
+                { success: false, message: err.message || "Internal Server Error" }
             );
         }
     }
