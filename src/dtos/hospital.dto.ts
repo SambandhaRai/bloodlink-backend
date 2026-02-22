@@ -11,7 +11,7 @@ export const UpdateHospitalDto = HospitalSchema.pick({
   name: true,
   location: true,
 }).extend({
-    isActive: z.boolean().optional(),
+  isActive: z.boolean().optional(),
 }).partial();
 
 export type UpdateHospitalDto = z.infer<typeof UpdateHospitalDto>;

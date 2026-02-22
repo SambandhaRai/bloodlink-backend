@@ -10,7 +10,7 @@ export interface IBloodGroupRepository {
     getBloodGroupByName(bloodGroup: String): Promise<IBloodGroup | null>;
 }
 
-export class BloodGroupRepository implements IBloodGroupRepository{
+export class BloodGroupRepository implements IBloodGroupRepository {
     async createBloodGroup(data: Partial<IBloodGroup>): Promise<IBloodGroup> {
         const bloodGroup = new BloodGroupModel(data);
         return await bloodGroup.save();
@@ -27,7 +27,7 @@ export class BloodGroupRepository implements IBloodGroupRepository{
     }
 
     async updateBloodGroup(id: String, data: Partial<IBloodGroup>): Promise<IBloodGroup | null> {
-        const bloodGroup = await BloodGroupModel.findByIdAndUpdate(id, data, {new : true});
+        const bloodGroup = await BloodGroupModel.findByIdAndUpdate(id, data, { new: true });
         return bloodGroup;
     }
 
@@ -37,7 +37,7 @@ export class BloodGroupRepository implements IBloodGroupRepository{
     }
 
     async getBloodGroupByName(bloodGroup: String): Promise<IBloodGroup | null> {
-        const bloodGroupName = await BloodGroupModel.findOne({"bloodGroup": bloodGroup});
+        const bloodGroupName = await BloodGroupModel.findOne({ "bloodGroup": bloodGroup });
         return bloodGroupName;
     }
 }
