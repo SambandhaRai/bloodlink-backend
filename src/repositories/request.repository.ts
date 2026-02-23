@@ -214,17 +214,20 @@ export class RequestRepository implements IRequestRepostory {
         const skip = (page - 1) * size;
         const maxDistanceMeters = maxDistanceKm * 1000;
 
-        const searchStage =
-            search.trim()
-                ? {
-                    $match: {
-                        $or: [
-                            { recipientDetails: { $regex: search, $options: "i" } },
-                            { patientName: { $regex: search, $options: "i" } },
-                        ],
-                    },
-                }
-                : null;
+        const compatibleObjectIds = (compatibleBloodIds ?? []).map((id: any) =>
+            id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))
+        );
+
+        const searchStage = search.trim()
+            ? {
+                $match: {
+                    $or: [
+                        { recipientDetails: { $regex: search, $options: "i" } },
+                        { patientName: { $regex: search, $options: "i" } },
+                    ],
+                },
+            }
+            : null;
 
         const pipeline: any[] = [
             {
@@ -241,13 +244,18 @@ export class RequestRepository implements IRequestRepostory {
             {
                 $lookup: {
                     from: "requests",
-                    let: { hid: "$_id", hname: "$name", hloc: "$location", dist: "$distanceMeters" },
+                    let: {
+                        hid: "$_id",
+                        hname: "$name",
+                        hloc: "$location",
+                        dist: "$distanceMeters",
+                    },
                     pipeline: [
                         {
                             $match: {
                                 $expr: { $eq: ["$hospitalId", "$$hid"] },
                                 requestStatus: "pending",
-                                recipientBloodId: { $in: compatibleBloodIds },
+                                recipientBloodId: { $in: compatibleObjectIds },
                             },
                         },
                         { $sort: { createdAt: -1 } },
@@ -286,11 +294,7 @@ export class RequestRepository implements IRequestRepostory {
                 },
             },
             { $unwind: "$postedBy" },
-            {
-                $project: {
-                    "postedBy.password": 0,
-                },
-            },
+            { $project: { "postedBy.password": 0 } },
             {
                 $lookup: {
                     from: "bloodgroups",
@@ -304,6 +308,7 @@ export class RequestRepository implements IRequestRepostory {
                     "postedBy.bloodId": { $arrayElemAt: ["$postedBy.bloodId", 0] },
                 },
             },
+            { $sort: { createdAt: -1 } },
             {
                 $facet: {
                     requests: [{ $skip: skip }, { $limit: size }],
@@ -312,15 +317,12 @@ export class RequestRepository implements IRequestRepostory {
             },
             {
                 $addFields: {
-                    totalRequests: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+                    totalRequests: {
+                        $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0],
+                    },
                 },
             },
-            {
-                $project: {
-                    requests: 1,
-                    totalRequests: 1,
-                },
-            },
+            { $project: { requests: 1, totalRequests: 1 } },
         ];
         const aggRes = await HospitalModel.aggregate(pipeline);
         const first = aggRes[0] || { requests: [], totalRequests: 0 };

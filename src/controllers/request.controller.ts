@@ -132,7 +132,7 @@ export class RequestController {
 
             const lng = Number(req.query.lng);
             const lat = Number(req.query.lat);
-            const km = req.query.km ? Number(req.query.km) : 10;
+            const km = req.query.km ? Number(req.query.km) : 5;
 
             if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
                 return res.status(400).json({ success: false, message: "lng and lat are required numbers" });

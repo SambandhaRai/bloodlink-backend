@@ -186,7 +186,7 @@ export class RequestService {
         size?: string;
         search?: string;
     }) {
-        const { userId, lng, lat, km = 10, page = "1", size = "10", search = "" } = params;
+        const { userId, lng, lat, km = 5, page = "1", size = "10", search = "" } = params;
 
         const currentPage = Math.max(parseInt(page) || 1, 1);
         const currentSize = Math.min(Math.max(parseInt(size) || 10, 1), 50);
