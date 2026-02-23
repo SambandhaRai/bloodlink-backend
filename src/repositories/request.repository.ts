@@ -17,6 +17,15 @@ export interface IRequestRepostory {
         ongoing: { requestedOngoing: IRequest[]; donationOngoing: IRequest[] };
         received: IRequest[];
     }>;
+    getMatchedRequests(args: {
+        lng: number;
+        lat: number;
+        maxDistanceKm: number;
+        compatibleBloodIds: mongoose.Types.ObjectId[];
+        page: number;
+        size: number;
+        search?: string;
+    }): Promise<{ requests: any[]; totalRequests: number }>;
 }
 
 export class RequestRepository implements IRequestRepostory {
@@ -183,5 +192,139 @@ export class RequestRepository implements IRequestRepostory {
             });
 
         return finished;
+    }
+
+    async getMatchedRequests({
+        lng,
+        lat,
+        maxDistanceKm,
+        compatibleBloodIds,
+        page,
+        size,
+        search = "",
+    }: {
+        lng: number;
+        lat: number;
+        maxDistanceKm: number;
+        compatibleBloodIds: mongoose.Types.ObjectId[];
+        page: number;
+        size: number;
+        search?: string;
+    }) {
+        const skip = (page - 1) * size;
+        const maxDistanceMeters = maxDistanceKm * 1000;
+
+        const searchStage =
+            search.trim()
+                ? {
+                    $match: {
+                        $or: [
+                            { recipientDetails: { $regex: search, $options: "i" } },
+                            { patientName: { $regex: search, $options: "i" } },
+                        ],
+                    },
+                }
+                : null;
+
+        const pipeline: any[] = [
+            {
+                $geoNear: {
+                    near: { type: "Point", coordinates: [lng, lat] },
+                    key: "location",
+                    distanceField: "distanceMeters",
+                    maxDistance: maxDistanceMeters,
+                    spherical: true,
+                    query: { isActive: true },
+                },
+            },
+
+            {
+                $lookup: {
+                    from: "requests",
+                    let: { hid: "$_id", hname: "$name", hloc: "$location", dist: "$distanceMeters" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$hospitalId", "$$hid"] },
+                                requestStatus: "pending",
+                                recipientBloodId: { $in: compatibleBloodIds },
+                            },
+                        },
+                        { $sort: { createdAt: -1 } },
+                        {
+                            $addFields: {
+                                hospital: {
+                                    _id: "$$hid",
+                                    name: "$$hname",
+                                    location: "$$hloc",
+                                    distanceMeters: "$$dist",
+                                },
+                            },
+                        },
+                    ],
+                    as: "requests",
+                },
+            },
+            { $unwind: "$requests" },
+            { $replaceRoot: { newRoot: "$requests" } },
+            ...(searchStage ? [searchStage] : []),
+            {
+                $lookup: {
+                    from: "bloodgroups",
+                    localField: "recipientBloodId",
+                    foreignField: "_id",
+                    as: "recipientBloodId",
+                },
+            },
+            { $unwind: "$recipientBloodId" },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "postedBy",
+                    foreignField: "_id",
+                    as: "postedBy",
+                },
+            },
+            { $unwind: "$postedBy" },
+            {
+                $project: {
+                    "postedBy.password": 0,
+                },
+            },
+            {
+                $lookup: {
+                    from: "bloodgroups",
+                    localField: "postedBy.bloodId",
+                    foreignField: "_id",
+                    as: "postedBy.bloodId",
+                },
+            },
+            {
+                $addFields: {
+                    "postedBy.bloodId": { $arrayElemAt: ["$postedBy.bloodId", 0] },
+                },
+            },
+            {
+                $facet: {
+                    requests: [{ $skip: skip }, { $limit: size }],
+                    total: [{ $count: "count" }],
+                },
+            },
+            {
+                $addFields: {
+                    totalRequests: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+                },
+            },
+            {
+                $project: {
+                    requests: 1,
+                    totalRequests: 1,
+                },
+            },
+        ];
+        const aggRes = await HospitalModel.aggregate(pipeline);
+        const first = aggRes[0] || { requests: [], totalRequests: 0 };
+
+        return { requests: first.requests, totalRequests: first.totalRequests };
     }
 }
