@@ -72,6 +72,25 @@ export class AdminUserController {
         }
     }
 
+    async deleteHospital(req: Request, res: Response) {
+        try {
+            const hospitalId = req.params.id;
+            const deletedHospital = await adminService.deleteHospital(hospitalId);
+            if (!deletedHospital) {
+                return res.status(404).json(
+                    { success: false, message: "Hospital not found" }
+                );
+            }
+            return res.status(200).json(
+                { success: true, message: "Hospital Deleted Successfully" }
+            );
+        } catch (err: Error | any) {
+            return res.status(err.statusCode || 500).json(
+                { success: false, message: err.message || "Internal Server Error" }
+            );
+        }
+    }
+
 
     async updateUser(req: Request, res: Response, next: NextFunction) {
         try {

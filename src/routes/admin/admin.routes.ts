@@ -13,6 +13,7 @@ router.post('/bloodGroups/create', adminUserController.createBloodGroup);
 
 router.post('/hospital', adminUserController.addHospital);
 router.put('/hospital/:id', adminUserController.updateHospital);
+router.delete('/hospital/:id', adminUserController.deleteHospital);
 
 router.get('/users', adminUserController.getAllUsers);
 router.get('/users/:id', adminUserController.getUserById);

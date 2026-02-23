@@ -35,6 +35,15 @@ export class AdminService {
         return updatedHospital;
     }
 
+    async deleteHospital(hospitalId: string) {
+        const hospital = await hospitalRepository.getHospitalById(hospitalId);
+        if (!hospital) {
+            throw new HttpError(404, "Hospital not found");
+        }
+        const deleted = await hospitalRepository.deleteHospital(hospitalId);
+        return deleted;
+    }
+
     async getAllUsers({ page, size, search }: { page?: string | undefined, size?: string | undefined, search?: string | undefined }) {
         const currentPage = page ? parseInt(page) : 1;
         const currentSize = size ? parseInt(size) : 10;
@@ -80,6 +89,6 @@ export class AdminService {
             throw new HttpError(404, "User not found");
         }
         const deletedUser = await userRepository.deleteOneUser(id);
-        return deletedUser
+        return deletedUser;
     }
 }
