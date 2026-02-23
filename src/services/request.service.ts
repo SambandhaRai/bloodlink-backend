@@ -3,6 +3,9 @@ import { CreateRequestDto } from "../dtos/request.dto";
 import { RequestRepository } from "../repositories/request.repository";
 import { HttpError } from "../errors/http-error";
 import { UserRepository } from "../repositories/user.repository";
+import { COMPATIBLE } from "../utils/blood-compatibility";
+import { BloodGroupModel } from "../models/blood.model";
+import { UserModel } from "../models/user.model";
 
 let requestRepository = new RequestRepository();
 let userRepository = new UserRepository();
@@ -156,5 +159,58 @@ export class RequestService {
 
         await userRepository.unlockDonorActiveRequest(donorId, requestId);
         return finished;
+    }
+
+    private async getCompatibleBloodIds(userId: string) {
+        const user = await UserModel.findById(userId).populate("bloodId");
+        if (!user) throw new HttpError(404, "User not found");
+
+        const donorGroup = (user.bloodId as any)?.bloodGroup as string;
+        if (!donorGroup) throw new HttpError(400, "User blood group missing");
+
+        const compatibleGroups = COMPATIBLE[donorGroup] ?? [donorGroup];
+
+        const docs = await BloodGroupModel.find({
+            bloodGroup: { $in: compatibleGroups },
+        }).select("_id");
+
+        return docs.map((d) => d._id as mongoose.Types.ObjectId);
+    }
+
+    async getMatchedRequests(params: {
+        userId: string;
+        lng: number;
+        lat: number;
+        km?: number;
+        page?: string;
+        size?: string;
+        search?: string;
+    }) {
+        const { userId, lng, lat, km = 10, page = "1", size = "10", search = "" } = params;
+
+        const currentPage = Math.max(parseInt(page) || 1, 1);
+        const currentSize = Math.min(Math.max(parseInt(size) || 10, 1), 50);
+
+        const compatibleBloodIds = await this.getCompatibleBloodIds(userId);
+
+        const { requests, totalRequests } = await requestRepository.getMatchedRequests({
+            lng,
+            lat,
+            maxDistanceKm: km,
+            compatibleBloodIds,
+            page: currentPage,
+            size: currentSize,
+            search,
+        });
+
+        return {
+            requests,
+            pagination: {
+                page: currentPage,
+                size: currentSize,
+                total: totalRequests,
+                totalPages: Math.ceil(totalRequests / currentSize),
+            },
+        };
     }
 }

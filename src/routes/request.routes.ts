@@ -9,6 +9,8 @@ router.post("/", authorizedMiddleware, requestController.createRequest);
 
 router.get("/user/history", authorizedMiddleware, requestController.getUserHistory);
 
+router.get("/matched", authorizedMiddleware, requestController.getMatchedRequests);
+
 router.get("/", authorizedMiddleware, requestController.getAllPendingRequests);
 router.get("/:id", authorizedMiddleware, requestController.getRequestById);
 
