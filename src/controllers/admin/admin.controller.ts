@@ -165,4 +165,33 @@ export class AdminUserController {
             );
         }
     }
+
+    async getUserHistoryAdmin(req: Request, res: Response) {
+        const userId = req.params.id;
+
+        const data = await adminService.getUserHistoryAdmin(userId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Fetched user request history successfully",
+            data,
+        });
+    };
+
+    async getRequestStats(req: Request, res: Response) {
+        try {
+            const stats = await adminService.getRequestStatsAdmin();
+
+            return res.status(200).json({
+                success: true,
+                message: "Fetched request stats successfully",
+                data: stats,
+            });
+        } catch (err: Error | any) {
+            return res.status(err.statusCode || 500).json({
+                success: false,
+                message: err.message || "Internal server error",
+            });
+        }
+    }
 }

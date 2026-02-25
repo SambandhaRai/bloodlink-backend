@@ -6,9 +6,12 @@ import { UpdateUserDto } from "../../dtos/user.dto";
 import { CreateHospitalDto, UpdateHospitalDto } from "../../dtos/hospital.dto";
 import { HospitalRepository } from "../../repositories/hospital.repository";
 import mongoose from "mongoose";
+import { UserModel } from "../../models/user.model";
+import { RequestRepository } from "../../repositories/request.repository";
 
 let hospitalRepository = new HospitalRepository();
 let bloodGroupRepository = new BloodGroupRepository();
+let requestRepository = new RequestRepository();
 let userRepository = new UserRepository();
 
 export class AdminService {
@@ -90,5 +93,51 @@ export class AdminService {
         }
         const deletedUser = await userRepository.deleteOneUser(id);
         return deletedUser;
+    }
+
+    async getUserHistoryAdmin(userId: string) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new HttpError(400, "Invalid user id");
+        }
+
+        const exists = await UserModel.exists({ _id: userId });
+        if (!exists) {
+            throw new HttpError(404, "User not found");
+        }
+
+        const history = await requestRepository.getMyHistory(new mongoose.Types.ObjectId(userId));
+
+        const donatedCount = history.donated?.length || 0;
+        const receivedCount = history.received?.length || 0;
+
+        const requestedOngoingCount = history.ongoing?.requestedOngoing?.length || 0;
+        const donationOngoingCount = history.ongoing?.donationOngoing?.length || 0;
+
+        return {
+            ...history,
+            counts: {
+                donated: donatedCount,
+                received: receivedCount,
+                requestedOngoing: requestedOngoingCount,
+                donationOngoing: donationOngoingCount,
+                totalOngoing: requestedOngoingCount + donationOngoingCount,
+                total:
+                    donatedCount +
+                    receivedCount +
+                    requestedOngoingCount +
+                    donationOngoingCount,
+            },
+        };
+    }
+
+    async getRequestStatsAdmin() {
+        const stats = await requestRepository.getRequestStats();
+
+        return {
+            totalRequests: stats.total,
+            pendingRequests: stats.pending,
+            acceptedRequests: stats.accepted,
+            finishedRequests: stats.finished,
+        };
     }
 }

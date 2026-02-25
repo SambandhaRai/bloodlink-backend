@@ -84,11 +84,11 @@ export class RequestService {
         return request;
     }
 
-    async getUserHistory(userId: string) {
+    async getMyHistory(userId: string) {
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             throw new HttpError(401, "Unauthorized");
         }
-        return await requestRepository.getUserHistory(new mongoose.Types.ObjectId(userId));
+        return await requestRepository.getMyHistory(new mongoose.Types.ObjectId(userId));
     }
 
     async acceptRequest(requestId: string, donorId: string) {

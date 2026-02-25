@@ -12,7 +12,7 @@ export interface IRequestRepostory {
     acceptRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null>;
     finishRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null>;
 
-    getUserHistory(userId: mongoose.Types.ObjectId): Promise<{
+    getMyHistory(userId: mongoose.Types.ObjectId): Promise<{
         donated: IRequest[];
         ongoing: { requestedOngoing: IRequest[]; donationOngoing: IRequest[] };
         received: IRequest[];
@@ -26,10 +26,17 @@ export interface IRequestRepostory {
         size: number;
         search?: string;
     }): Promise<{ requests: any[]; totalRequests: number }>;
+
+    getRequestStats(): Promise<{
+        total: number;
+        pending: number;
+        accepted: number;
+        finished: number;
+    }>;
 }
 
 export class RequestRepository implements IRequestRepostory {
-    async getUserHistory(userId: mongoose.Types.ObjectId) {
+    async getMyHistory(userId: mongoose.Types.ObjectId) {
         const basePopulate = [
             { path: "recipientBloodId", select: "bloodGroup" },
             { path: "hospitalId", select: "name location" },
@@ -328,5 +335,16 @@ export class RequestRepository implements IRequestRepostory {
         const first = aggRes[0] || { requests: [], totalRequests: 0 };
 
         return { requests: first.requests, totalRequests: first.totalRequests };
+    }
+
+    async getRequestStats() {
+        const [total, pending, accepted, finished] = await Promise.all([
+            RequestModel.countDocuments({}),
+            RequestModel.countDocuments({ requestStatus: "pending" }),
+            RequestModel.countDocuments({ requestStatus: "accepted" }),
+            RequestModel.countDocuments({ requestStatus: "finished" }),
+        ]);
+
+        return { total, pending, accepted, finished };
     }
 }

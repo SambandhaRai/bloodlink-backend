@@ -7,7 +7,7 @@ let requestController = new RequestController();
 
 router.post("/", authorizedMiddleware, requestController.createRequest);
 
-router.get("/user/history", authorizedMiddleware, requestController.getUserHistory);
+router.get("/my/history", authorizedMiddleware, requestController.getMyHistory);
 
 router.get("/matched", authorizedMiddleware, requestController.getMatchedRequests);
 

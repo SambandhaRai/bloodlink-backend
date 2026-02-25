@@ -32,14 +32,14 @@ export class RequestController {
         }
     }
 
-    async getUserHistory(req: Request, res: Response) {
+    async getMyHistory(req: Request, res: Response) {
         try {
             const userId = req.user?._id;
             if (!userId) {
                 return res.status(401).json({ success: false, message: "Unauthorized" });
             }
 
-            const data = await requestService.getUserHistory(String(userId));
+            const data = await requestService.getMyHistory(String(userId));
             return res.status(200).json({
                 success: true,
                 data,
