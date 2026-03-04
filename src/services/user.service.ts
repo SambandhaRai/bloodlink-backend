@@ -100,6 +100,27 @@ export class UserService {
         return updatedUser;
     }
 
+    async updateUserLocation(userId: string, lng: number, lat: number) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new HttpError(401, "Unauthorized");
+        }
+
+        if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+            throw new HttpError(400, "Invalid longitude");
+        }
+
+        if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+            throw new HttpError(400, "Invalid latitude");
+        }
+
+        const updatedUser = await userRepository.updateUserLocation(userId, lng, lat);
+        if (!updatedUser) {
+            throw new HttpError(404, "User not found");
+        }
+
+        return updatedUser;
+    }
+
     async uploadProfilePicture(userId: string, file?: Express.Multer.File) {
         if (!file) {
             throw new HttpError(400, "Please upload a file");

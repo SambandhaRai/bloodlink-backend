@@ -13,14 +13,36 @@ const UserSchema: Schema = new Schema({
     profilePicture: { type: String, required: false },
     activeAcceptedRequestId: { type: Schema.Types.ObjectId, ref: "Request", default: null },
     role: { type: String, enum: ['admin', 'user'], default: 'user' },
+    location: {
+        type: {
+            type: String,
+            enum: ["Point"],
+            default: "Point",
+        },
+        // GeoJSON format: [longitude, latitude]
+        coordinates: {
+            type: [Number],
+            default: [0, 0],
+            validate: {
+                validator: (coords: number[]) => Array.isArray(coords) && coords.length === 2,
+                message: "Location coordinates must be [lng, lat]",
+            },
+        },
+    },
 }, {
     timestamps: true,
 });
+
+UserSchema.index({ location: "2dsphere" });
 
 export interface IUser extends Omit<UserType, "bloodId" | "activeAcceptedRequestId">, Document {
     _id: mongoose.Types.ObjectId;
     bloodId: mongoose.Types.ObjectId;
     activeAcceptedRequestId: mongoose.Types.ObjectId | null;
+    location?: {
+        type: "Point";
+        coordinates: [number, number];
+    };
     createdAt: Date;
     updatedAt: Date;
 }

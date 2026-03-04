@@ -46,6 +46,12 @@ export const UpdateUserDto = UserSchema.pick(
 ).extend({ dob: parseToDate.optional() }).partial();
 export type UpdateUserDto = z.infer<typeof UpdateUserDto>;
 
+export const UpdateUserLocationDto = z.object({
+    lng: z.coerce.number().finite().min(-180).max(180),
+    lat: z.coerce.number().finite().min(-90).max(90),
+});
+export type UpdateUserLocationDto = z.infer<typeof UpdateUserLocationDto>;
+
 // Login
 export const LoginUserDto = z.object({
     email: z.email(),

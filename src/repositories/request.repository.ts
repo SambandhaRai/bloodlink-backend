@@ -217,7 +217,7 @@ export class RequestRepository implements IRequestRepostory {
         page: number;
         size: number;
         search?: string;
-    }) {
+    }): Promise<{ requests: any[]; totalRequests: number }> {
         const skip = (page - 1) * size;
         const maxDistanceMeters = maxDistanceKm * 1000;
 
@@ -247,16 +247,10 @@ export class RequestRepository implements IRequestRepostory {
                     query: { isActive: true },
                 },
             },
-
             {
                 $lookup: {
                     from: "requests",
-                    let: {
-                        hid: "$_id",
-                        hname: "$name",
-                        hloc: "$location",
-                        dist: "$distanceMeters",
-                    },
+                    let: { hid: "$_id" },
                     pipeline: [
                         {
                             $match: {
@@ -266,23 +260,35 @@ export class RequestRepository implements IRequestRepostory {
                             },
                         },
                         { $sort: { createdAt: -1 } },
-                        {
-                            $addFields: {
-                                hospital: {
-                                    _id: "$$hid",
-                                    name: "$$hname",
-                                    location: "$$hloc",
-                                    distanceMeters: "$$dist",
-                                },
-                            },
-                        },
                     ],
                     as: "requests",
                 },
             },
             { $unwind: "$requests" },
-            { $replaceRoot: { newRoot: "$requests" } },
+            {
+                $replaceRoot: {
+                    newRoot: {
+                        $mergeObjects: [
+                            "$requests",
+                            {
+                                __hospitalFromGeo: {
+                                    _id: "$_id",
+                                    name: "$name",
+                                    location: "$location",
+                                    distanceMeters: "$distanceMeters",
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
             ...(searchStage ? [searchStage] : []),
+            {
+                $addFields: {
+                    hospitalId: "$__hospitalFromGeo",
+                },
+            },
+            { $project: { __hospitalFromGeo: 0 } },
             {
                 $lookup: {
                     from: "bloodgroups",

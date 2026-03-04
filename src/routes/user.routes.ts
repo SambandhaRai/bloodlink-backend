@@ -8,6 +8,7 @@ let userController = new UserController();
 
 router.get("/profile", authorizedMiddleware, userController.getProfile);
 router.put("/update-profile", authorizedMiddleware, uploads.single("profilePicture"), userController.updateProfile);
+router.patch("/location", authorizedMiddleware, userController.updateLocation);
 router.put("/profile/upload", authorizedMiddleware, uploads.single("profilePicture"), userController.uploadProfilePicture);
 
 router.post("/request-password-reset", userController.sendResetPasswordEmail);
