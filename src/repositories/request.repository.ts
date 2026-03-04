@@ -6,7 +6,17 @@ import { HospitalModel } from "../models/hospital.model";
 
 export interface IRequestRepostory {
     createRequest(data: Partial<IRequest>): Promise<IRequest>;
-    getAllPendingRequests({ page, size, search }: { page: number, size: number, search?: string }): Promise<{ requests: IRequest[], totalRequests: number }>;
+    getAllPendingRequests({
+        userId,
+        page,
+        size,
+        search
+    }: {
+        userId: mongoose.Types.ObjectId;
+        page: number;
+        size: number;
+        search?: string
+    }): Promise<{ requests: IRequest[], totalRequests: number }>;
     getRequestById(id: String): Promise<IRequest | null>;
 
     acceptRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null>;
@@ -22,6 +32,7 @@ export interface IRequestRepostory {
         lat: number;
         maxDistanceKm: number;
         compatibleBloodIds: mongoose.Types.ObjectId[];
+        excludePostedById: mongoose.Types.ObjectId;
         page: number;
         size: number;
         search?: string;
@@ -72,9 +83,20 @@ export class RequestRepository implements IRequestRepostory {
         return { donated, ongoing: { requestedOngoing, donationOngoing }, received };
     }
 
-    async getAllPendingRequests({ page, size, search }: { page: number; size: number; search?: string; }): Promise<{ requests: IRequest[]; totalRequests: number; }> {
+    async getAllPendingRequests({
+        userId,
+        page,
+        size,
+        search,
+    }: {
+        userId: mongoose.Types.ObjectId;
+        page: number;
+        size: number;
+        search?: string;
+    }): Promise<{ requests: IRequest[]; totalRequests: number; }> {
         let filter: QueryFilter<IRequest> = {
-            "requestStatus": "pending"
+            "requestStatus": "pending",
+            postedBy: { $ne: userId },
         };
         if (search) {
             const regex = new RegExp(search, "i");
@@ -206,6 +228,7 @@ export class RequestRepository implements IRequestRepostory {
         lat,
         maxDistanceKm,
         compatibleBloodIds,
+        excludePostedById,
         page,
         size,
         search = "",
@@ -214,6 +237,7 @@ export class RequestRepository implements IRequestRepostory {
         lat: number;
         maxDistanceKm: number;
         compatibleBloodIds: mongoose.Types.ObjectId[];
+        excludePostedById: mongoose.Types.ObjectId;
         page: number;
         size: number;
         search?: string;
@@ -257,6 +281,7 @@ export class RequestRepository implements IRequestRepostory {
                                 $expr: { $eq: ["$hospitalId", "$$hid"] },
                                 requestStatus: "pending",
                                 recipientBloodId: { $in: compatibleObjectIds },
+                                postedBy: { $ne: excludePostedById },
                             },
                         },
                         { $sort: { createdAt: -1 } },

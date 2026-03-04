@@ -55,8 +55,13 @@ export class RequestController {
 
     async getAllPendingRequests(req: Request, res: Response) {
         try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
             const { page, size, search }: QueryParams = req.query;
             const { requests, pagination } = await requestService.getAllPendingRequests({
+                userId: String(userId),
                 page: page,
                 size: size,
                 search: search

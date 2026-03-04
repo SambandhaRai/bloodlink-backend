@@ -62,11 +62,30 @@ export class RequestService {
         return newRequest;
     }
 
-    async getAllPendingRequests({ page, size, search }: { page?: string | undefined, size?: string | undefined, search?: string | undefined }) {
+    async getAllPendingRequests({
+        userId,
+        page,
+        size,
+        search,
+    }: {
+        userId: string;
+        page?: string | undefined;
+        size?: string | undefined;
+        search?: string | undefined
+    }) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new HttpError(401, "Unauthorized");
+        }
+
         const currentPage = page ? parseInt(page) : 1;
         const currentSize = size ? parseInt(size) : 10;
         const currentSearch = search || "";
-        const { requests, totalRequests } = await requestRepository.getAllPendingRequests({ page: currentPage, size: currentSize, search: currentSearch });
+        const { requests, totalRequests } = await requestRepository.getAllPendingRequests({
+            userId: new mongoose.Types.ObjectId(userId),
+            page: currentPage,
+            size: currentSize,
+            search: currentSearch
+        });
         const pagination = {
             page: currentPage,
             size: currentSize,
@@ -198,6 +217,7 @@ export class RequestService {
             lat,
             maxDistanceKm: km,
             compatibleBloodIds,
+            excludePostedById: new mongoose.Types.ObjectId(userId),
             page: currentPage,
             size: currentSize,
             search,
