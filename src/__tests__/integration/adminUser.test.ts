@@ -2,6 +2,7 @@ import request from "supertest";
 import app from "../../app";
 import { UserModel } from "../../models/user.model";
 import { BloodGroupModel } from "../../models/blood.model";
+import { HospitalModel } from "../../models/hospital.model";
 import bcryptjs from "bcryptjs";
 
 describe("Admin User Integration Tests", () => {
@@ -52,6 +53,7 @@ describe("Admin User Integration Tests", () => {
     let userToken: string;
     let user1Id: string;
     let user2Id: string;
+    let managedHospitalId: string;
 
     beforeAll(async () => {
         // cleanup first
@@ -67,6 +69,7 @@ describe("Admin User Integration Tests", () => {
         });
 
         await BloodGroupModel.deleteMany({ bloodGroup: bloodGroupPayload.bloodGroup });
+        await HospitalModel.deleteMany({ name: /Admin Managed Hospital/i });
 
         const hashed = await bcryptjs.hash(adminUser.password, 10);
         await UserModel.create({
@@ -127,6 +130,7 @@ describe("Admin User Integration Tests", () => {
         });
 
         await BloodGroupModel.deleteMany({ bloodGroup: bloodGroupPayload.bloodGroup });
+        await HospitalModel.deleteMany({ name: /Admin Managed Hospital/i });
     });
 
     describe("POST /api/admin/bloodGroups/create", () => {
@@ -288,6 +292,78 @@ describe("Admin User Integration Tests", () => {
                 .set("Authorization", `Bearer ${userToken}`);
 
             expect([401, 403]).toContain(response.status);
+        });
+    });
+
+    describe("PUT & DELETE /api/admin/hospital/:id", () => {
+        test("Should update a hospital (admin only)", async () => {
+            const createdHospital = await HospitalModel.create({
+                name: "Admin Managed Hospital",
+                location: {
+                    type: "Point",
+                    coordinates: [85.33, 27.71],
+                },
+            });
+            managedHospitalId = String(createdHospital._id);
+
+            const response = await request(app)
+                .put(`/api/admin/hospital/${managedHospitalId}`)
+                .set("Authorization", `Bearer ${adminToken}`)
+                .send({
+                    name: "Admin Managed Hospital Updated",
+                    isActive: false,
+                });
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("success", true);
+            expect(response.body).toHaveProperty("message", "Hospital updated successfully");
+            expect(response.body.data).toHaveProperty("_id", managedHospitalId);
+            expect(response.body.data).toHaveProperty("isActive", false);
+        });
+
+        test("Should delete a hospital (admin only)", async () => {
+            const response = await request(app)
+                .delete(`/api/admin/hospital/${managedHospitalId}`)
+                .set("Authorization", `Bearer ${adminToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("success", true);
+            expect(response.body).toHaveProperty("message", "Hospital Deleted Successfully");
+
+            const check = await HospitalModel.findById(managedHospitalId);
+            expect(check).toBeNull();
+        });
+    });
+
+    describe("GET /api/admin/requests/stats", () => {
+        test("Should fetch request statistics (admin only)", async () => {
+            const response = await request(app)
+                .get("/api/admin/requests/stats")
+                .set("Authorization", `Bearer ${adminToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("success", true);
+            expect(response.body).toHaveProperty("data");
+            expect(response.body.data).toHaveProperty("totalRequests");
+            expect(response.body.data).toHaveProperty("pendingRequests");
+            expect(response.body.data).toHaveProperty("acceptedRequests");
+            expect(response.body.data).toHaveProperty("finishedRequests");
+        });
+    });
+
+    describe("GET /api/admin/users/:id/request-history", () => {
+        test("Should fetch request history by user id (admin only)", async () => {
+            const response = await request(app)
+                .get(`/api/admin/users/${user1Id}/request-history`)
+                .set("Authorization", `Bearer ${adminToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("success", true);
+            expect(response.body).toHaveProperty("data");
+            expect(response.body.data).toHaveProperty("donated");
+            expect(response.body.data).toHaveProperty("ongoing");
+            expect(response.body.data).toHaveProperty("received");
+            expect(response.body.data).toHaveProperty("counts");
         });
     });
 });

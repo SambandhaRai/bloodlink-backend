@@ -1,4 +1,4 @@
-import { UpdateUserDto } from "../dtos/user.dto";
+import { UpdateUserDto, UpdateUserLocationDto } from "../dtos/user.dto";
 import { UserService } from "../services/user.service";
 import { Request, Response } from "express";
 import z from "zod";
@@ -58,6 +58,43 @@ export class UserController {
                 success: false,
                 message: err.message || "Internal Server Error"
             })
+        }
+    }
+
+    async updateLocation(req: Request, res: Response) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: "Unauthorized",
+                });
+            }
+
+            const parsedData = UpdateUserLocationDto.safeParse(req.body);
+            if (!parsedData.success) {
+                return res.status(400).json({
+                    success: false,
+                    message: z.prettifyError(parsedData.error),
+                });
+            }
+
+            const updatedUser = await userService.updateUserLocation(
+                String(userId),
+                parsedData.data.lng,
+                parsedData.data.lat
+            );
+
+            return res.status(200).json({
+                success: true,
+                data: updatedUser,
+                message: "Location updated successfully",
+            });
+        } catch (err: Error | any) {
+            return res.status(err.statusCode || 500).json({
+                success: false,
+                message: err.message || "Internal Server Error",
+            });
         }
     }
 

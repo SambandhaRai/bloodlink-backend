@@ -6,21 +6,48 @@ import { HospitalModel } from "../models/hospital.model";
 
 export interface IRequestRepostory {
     createRequest(data: Partial<IRequest>): Promise<IRequest>;
-    getAllPendingRequests({ page, size, search }: { page: number, size: number, search?: string }): Promise<{ requests: IRequest[], totalRequests: number }>;
+    getAllPendingRequests({
+        userId,
+        page,
+        size,
+        search
+    }: {
+        userId: mongoose.Types.ObjectId;
+        page: number;
+        size: number;
+        search?: string
+    }): Promise<{ requests: IRequest[], totalRequests: number }>;
     getRequestById(id: String): Promise<IRequest | null>;
 
     acceptRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null>;
     finishRequest(requestId: String, donorId: mongoose.Types.ObjectId): Promise<IRequest | null>;
 
-    getUserHistory(userId: mongoose.Types.ObjectId): Promise<{
+    getMyHistory(userId: mongoose.Types.ObjectId): Promise<{
         donated: IRequest[];
         ongoing: { requestedOngoing: IRequest[]; donationOngoing: IRequest[] };
         received: IRequest[];
     }>;
+    getMatchedRequests(args: {
+        lng: number;
+        lat: number;
+        maxDistanceKm: number;
+        compatibleBloodIds: mongoose.Types.ObjectId[];
+        excludePostedById: mongoose.Types.ObjectId;
+        page: number;
+        size: number;
+        search?: string;
+    }): Promise<{ requests: any[]; totalRequests: number }>;
+
+    getRequestStats(): Promise<{
+        total: number;
+        pending: number;
+        accepted: number;
+        finished: number;
+    }>;
 }
 
 export class RequestRepository implements IRequestRepostory {
-    async getUserHistory(userId: mongoose.Types.ObjectId) {
+    async getMyHistory(userId: mongoose.Types.ObjectId) {
         const basePopulate = [
             { path: "recipientBloodId", select: "bloodGroup" },
             { path: "hospitalId", select: "name location" },
@@ -56,9 +83,20 @@ export class RequestRepository implements IRequestRepostory {
         return { donated, ongoing: { requestedOngoing, donationOngoing }, received };
     }
 
-    async getAllPendingRequests({ page, size, search }: { page: number; size: number; search?: string; }): Promise<{ requests: IRequest[]; totalRequests: number; }> {
+    async getAllPendingRequests({
+        userId,
+        page,
+        size,
+        search,
+    }: {
+        userId: mongoose.Types.ObjectId;
+        page: number;
+        size: number;
+        search?: string;
+    }): Promise<{ requests: IRequest[]; totalRequests: number; }> {
         let filter: QueryFilter<IRequest> = {
-            "requestStatus": "pending"
+            "requestStatus": "pending",
+            postedBy: { $ne: userId },
         };
         if (search) {
             const regex = new RegExp(search, "i");
@@ -183,5 +221,161 @@ export class RequestRepository implements IRequestRepostory {
             });
 
         return finished;
+    }
+
+    async getMatchedRequests({
+        lng,
+        lat,
+        maxDistanceKm,
+        compatibleBloodIds,
+        excludePostedById,
+        page,
+        size,
+        search = "",
+    }: {
+        lng: number;
+        lat: number;
+        maxDistanceKm: number;
+        compatibleBloodIds: mongoose.Types.ObjectId[];
+        excludePostedById: mongoose.Types.ObjectId;
+        page: number;
+        size: number;
+        search?: string;
+    }): Promise<{ requests: any[]; totalRequests: number }> {
+        const skip = (page - 1) * size;
+        const maxDistanceMeters = maxDistanceKm * 1000;
+
+        const compatibleObjectIds = (compatibleBloodIds ?? []).map((id: any) =>
+            id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))
+        );
+
+        const searchStage = search.trim()
+            ? {
+                $match: {
+                    $or: [
+                        { recipientDetails: { $regex: search, $options: "i" } },
+                        { patientName: { $regex: search, $options: "i" } },
+                    ],
+                },
+            }
+            : null;
+
+        const pipeline: any[] = [
+            {
+                $geoNear: {
+                    near: { type: "Point", coordinates: [lng, lat] },
+                    key: "location",
+                    distanceField: "distanceMeters",
+                    maxDistance: maxDistanceMeters,
+                    spherical: true,
+                    query: { isActive: true },
+                },
+            },
+            {
+                $lookup: {
+                    from: "requests",
+                    let: { hid: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$hospitalId", "$$hid"] },
+                                requestStatus: "pending",
+                                recipientBloodId: { $in: compatibleObjectIds },
+                                postedBy: { $ne: excludePostedById },
+                            },
+                        },
+                        { $sort: { createdAt: -1 } },
+                    ],
+                    as: "requests",
+                },
+            },
+            { $unwind: "$requests" },
+            {
+                $replaceRoot: {
+                    newRoot: {
+                        $mergeObjects: [
+                            "$requests",
+                            {
+                                __hospitalFromGeo: {
+                                    _id: "$_id",
+                                    name: "$name",
+                                    location: "$location",
+                                    distanceMeters: "$distanceMeters",
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+            ...(searchStage ? [searchStage] : []),
+            {
+                $addFields: {
+                    hospitalId: "$__hospitalFromGeo",
+                },
+            },
+            { $project: { __hospitalFromGeo: 0 } },
+            {
+                $lookup: {
+                    from: "bloodgroups",
+                    localField: "recipientBloodId",
+                    foreignField: "_id",
+                    as: "recipientBloodId",
+                },
+            },
+            { $unwind: "$recipientBloodId" },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "postedBy",
+                    foreignField: "_id",
+                    as: "postedBy",
+                },
+            },
+            { $unwind: "$postedBy" },
+            { $project: { "postedBy.password": 0 } },
+            {
+                $lookup: {
+                    from: "bloodgroups",
+                    localField: "postedBy.bloodId",
+                    foreignField: "_id",
+                    as: "postedBy.bloodId",
+                },
+            },
+            {
+                $addFields: {
+                    "postedBy.bloodId": { $arrayElemAt: ["$postedBy.bloodId", 0] },
+                },
+            },
+            { $sort: { createdAt: -1 } },
+            {
+                $facet: {
+                    requests: [{ $skip: skip }, { $limit: size }],
+                    total: [{ $count: "count" }],
+                },
+            },
+            {
+                $addFields: {
+                    totalRequests: {
+                        $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0],
+                    },
+                },
+            },
+            { $project: { requests: 1, totalRequests: 1 } },
+        ];
+        const aggRes = await HospitalModel.aggregate(pipeline);
+        const first = aggRes[0] || { requests: [], totalRequests: 0 };
+
+        return { requests: first.requests, totalRequests: first.totalRequests };
+    }
+
+    async getRequestStats() {
+        const [total, pending, accepted, finished] = await Promise.all([
+            RequestModel.countDocuments({}),
+            RequestModel.countDocuments({ requestStatus: "pending" }),
+            RequestModel.countDocuments({ requestStatus: "accepted" }),
+            RequestModel.countDocuments({ requestStatus: "finished" }),
+        ]);
+
+        return { total, pending, accepted, finished };
     }
 }

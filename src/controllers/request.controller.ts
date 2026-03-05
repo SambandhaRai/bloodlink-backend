@@ -32,14 +32,14 @@ export class RequestController {
         }
     }
 
-    async getUserHistory(req: Request, res: Response) {
+    async getMyHistory(req: Request, res: Response) {
         try {
             const userId = req.user?._id;
             if (!userId) {
                 return res.status(401).json({ success: false, message: "Unauthorized" });
             }
 
-            const data = await requestService.getUserHistory(String(userId));
+            const data = await requestService.getMyHistory(String(userId));
             return res.status(200).json({
                 success: true,
                 data,
@@ -55,8 +55,13 @@ export class RequestController {
 
     async getAllPendingRequests(req: Request, res: Response) {
         try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).json({ success: false, message: "Unauthorized" });
+            }
             const { page, size, search }: QueryParams = req.query;
             const { requests, pagination } = await requestService.getAllPendingRequests({
+                userId: String(userId),
                 page: page,
                 size: size,
                 search: search
@@ -122,6 +127,38 @@ export class RequestController {
             return res.status(err.statusCode || 500).json(
                 { success: false, message: err.message || "Internal Server Error" }
             );
+        }
+    }
+
+    async getMatchedRequests(req: any, res: any) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+            const lng = Number(req.query.lng);
+            const lat = Number(req.query.lat);
+            const km = req.query.km ? Number(req.query.km) : 5;
+
+            if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+                return res.status(400).json({ success: false, message: "lng and lat are required numbers" });
+            }
+
+            const { requests, pagination } = await requestService.getMatchedRequests({
+                userId: String(userId),
+                lng,
+                lat,
+                km,
+                page: req.query.page,
+                size: req.query.size,
+                search: req.query.search,
+            });
+
+            return res.status(200).json({ success: true, data: requests, pagination, message: "Matched requests fetched" });
+        } catch (err: any) {
+            return res.status(err.statusCode || 500).json({
+                success: false,
+                message: err.message || "Internal Server Error",
+            });
         }
     }
 }

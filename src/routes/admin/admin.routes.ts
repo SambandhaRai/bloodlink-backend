@@ -13,10 +13,14 @@ router.post('/bloodGroups/create', adminUserController.createBloodGroup);
 
 router.post('/hospital', adminUserController.addHospital);
 router.put('/hospital/:id', adminUserController.updateHospital);
+router.delete('/hospital/:id', adminUserController.deleteHospital);
 
 router.get('/users', adminUserController.getAllUsers);
 router.get('/users/:id', adminUserController.getUserById);
 router.put('/users/:id', uploads.single('profilePicture'), adminUserController.updateUser);
+router.get('/users/:id/request-history', adminUserController.getUserHistoryAdmin);
 router.delete('/users/:id', adminUserController.deleteUser);
+
+router.get("/requests/stats", adminUserController.getRequestStats);
 
 export default router;

@@ -12,6 +12,7 @@ export interface IUserRepository {
     getUserbyPhoneNumber(phoneNumber: String): Promise<IUser | null>;
 
     uploadProfilePicture(id: string, profilePicture: string): Promise<IUser | null>;
+    updateUserLocation(userId: string, lng: number, lat: number): Promise<IUser | null>;
 
     lockDonorActiveRequest(userId: string, requestId: string): Promise<IUser | null>;
     unlockDonorActiveRequest(userId: string, requestId: string): Promise<IUser | null>;
@@ -21,6 +22,23 @@ export class UserRepository implements IUserRepository {
 
     async uploadProfilePicture(id: string, profilePicture: string): Promise<IUser | null> {
         const updatedUser = await UserModel.findByIdAndUpdate(id, { profilePicture }, { new: true });
+        return updatedUser;
+    }
+
+    async updateUserLocation(userId: string, lng: number, lat: number): Promise<IUser | null> {
+        const updatedUser = await UserModel.findByIdAndUpdate(
+            userId,
+            {
+                $set: {
+                    location: {
+                        type: "Point",
+                        coordinates: [lng, lat],
+                    },
+                },
+            },
+            { new: true }
+        ).populate("bloodId", "bloodGroup");
+
         return updatedUser;
     }
 
@@ -66,12 +84,12 @@ export class UserRepository implements IUserRepository {
     }
 
     async getUserByEmail(email: String): Promise<IUser | null> {
-        const user = await UserModel.findOne({ "email": email });
+        const user = await UserModel.findOne({ "email": email }).populate("bloodId", "bloodGroup");
         return user;
     }
 
     async getUserbyPhoneNumber(phoneNumber: String): Promise<IUser | null> {
-        const user = await UserModel.findOne({ "phoneNumber": phoneNumber });
+        const user = await UserModel.findOne({ "phoneNumber": phoneNumber }).populate("bloodId", "bloodGroup");
         return user;
     }
 

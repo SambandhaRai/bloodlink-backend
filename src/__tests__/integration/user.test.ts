@@ -86,6 +86,53 @@ describe("User Integration Tests", () => {
         });
     });
 
+    describe("PATCH /api/user/location", () => {
+        test("Should update user location successfully", async () => {
+            const response = await request(app)
+                .patch("/api/user/location")
+                .set("Authorization", `Bearer ${token}`)
+                .send({ lng: 85.324, lat: 27.7172 });
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("success", true);
+            expect(response.body).toHaveProperty("message", "Location updated successfully");
+            expect(response.body.data).toHaveProperty("location");
+            expect(response.body.data.location).toHaveProperty("coordinates");
+        });
+    });
+
+    describe("PUT /api/user/profile/upload", () => {
+        test("Should fail when file is missing", async () => {
+            const response = await request(app)
+                .put("/api/user/profile/upload")
+                .set("Authorization", `Bearer ${token}`);
+
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty("success", false);
+            expect(response.body).toHaveProperty("message", "Please upload a file");
+        });
+    });
+
+    describe("POST /api/user/request-password-reset", () => {
+        test("Should fail when email is missing", async () => {
+            const response = await request(app)
+                .post("/api/user/request-password-reset")
+                .send({});
+
+            expect(response.status).toBe(400);
+            expect(response.body).toHaveProperty("message", "Email is required");
+        });
+
+        test("Should fail when user is not found", async () => {
+            const response = await request(app)
+                .post("/api/user/request-password-reset")
+                .send({ email: "missing_user_for_reset@test.com" });
+
+            expect(response.status).toBe(404);
+            expect(response.body).toHaveProperty("message", "User not found");
+        });
+    });
+
     describe("POST /api/user/reset-password/:token", () => {
         test("Should reset password successfully", async () => {
             const resetToken = jwt.sign(

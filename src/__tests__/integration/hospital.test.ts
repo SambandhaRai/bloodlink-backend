@@ -178,4 +178,30 @@ describe("Admin Hospital Integration Tests", () => {
             expect(response.body).toHaveProperty("success", false);
         });
     });
+
+    describe("GET /api/hospital", () => {
+        test("Should fetch all hospitals for authorized user", async () => {
+            const response = await request(app)
+                .get("/api/hospital?page=1&size=10&search=")
+                .set("Authorization", `Bearer ${userToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("success", true);
+            expect(Array.isArray(response.body.data)).toBe(true);
+            expect(response.body).toHaveProperty("pagination");
+            expect(response.body.pagination).toHaveProperty("page", 1);
+            expect(response.body.pagination).toHaveProperty("size", 10);
+        });
+
+        test("Should fetch one hospital by id for authorized user", async () => {
+            const response = await request(app)
+                .get(`/api/hospital/${createdHospitalId}`)
+                .set("Authorization", `Bearer ${userToken}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body).toHaveProperty("success", true);
+            expect(response.body).toHaveProperty("data");
+            expect(response.body.data).toHaveProperty("_id", createdHospitalId);
+        });
+    });
 });

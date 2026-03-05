@@ -3,6 +3,9 @@ import { CreateRequestDto } from "../dtos/request.dto";
 import { RequestRepository } from "../repositories/request.repository";
 import { HttpError } from "../errors/http-error";
 import { UserRepository } from "../repositories/user.repository";
+import { COMPATIBLE } from "../utils/blood-compatibility";
+import { BloodGroupModel } from "../models/blood.model";
+import { UserModel } from "../models/user.model";
 
 let requestRepository = new RequestRepository();
 let userRepository = new UserRepository();
@@ -59,11 +62,30 @@ export class RequestService {
         return newRequest;
     }
 
-    async getAllPendingRequests({ page, size, search }: { page?: string | undefined, size?: string | undefined, search?: string | undefined }) {
+    async getAllPendingRequests({
+        userId,
+        page,
+        size,
+        search,
+    }: {
+        userId: string;
+        page?: string | undefined;
+        size?: string | undefined;
+        search?: string | undefined
+    }) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new HttpError(401, "Unauthorized");
+        }
+
         const currentPage = page ? parseInt(page) : 1;
         const currentSize = size ? parseInt(size) : 10;
         const currentSearch = search || "";
-        const { requests, totalRequests } = await requestRepository.getAllPendingRequests({ page: currentPage, size: currentSize, search: currentSearch });
+        const { requests, totalRequests } = await requestRepository.getAllPendingRequests({
+            userId: new mongoose.Types.ObjectId(userId),
+            page: currentPage,
+            size: currentSize,
+            search: currentSearch
+        });
         const pagination = {
             page: currentPage,
             size: currentSize,
@@ -81,11 +103,11 @@ export class RequestService {
         return request;
     }
 
-    async getUserHistory(userId: string) {
+    async getMyHistory(userId: string) {
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             throw new HttpError(401, "Unauthorized");
         }
-        return await requestRepository.getUserHistory(new mongoose.Types.ObjectId(userId));
+        return await requestRepository.getMyHistory(new mongoose.Types.ObjectId(userId));
     }
 
     async acceptRequest(requestId: string, donorId: string) {
@@ -156,5 +178,59 @@ export class RequestService {
 
         await userRepository.unlockDonorActiveRequest(donorId, requestId);
         return finished;
+    }
+
+    private async getCompatibleBloodIds(userId: string) {
+        const user = await UserModel.findById(userId).populate("bloodId");
+        if (!user) throw new HttpError(404, "User not found");
+
+        const donorGroup = (user.bloodId as any)?.bloodGroup as string;
+        if (!donorGroup) throw new HttpError(400, "User blood group missing");
+
+        const compatibleGroups = COMPATIBLE[donorGroup] ?? [donorGroup];
+
+        const docs = await BloodGroupModel.find({
+            bloodGroup: { $in: compatibleGroups },
+        }).select("_id");
+
+        return docs.map((d) => d._id as mongoose.Types.ObjectId);
+    }
+
+    async getMatchedRequests(params: {
+        userId: string;
+        lng: number;
+        lat: number;
+        km?: number;
+        page?: string;
+        size?: string;
+        search?: string;
+    }) {
+        const { userId, lng, lat, km = 5, page = "1", size = "10", search = "" } = params;
+
+        const currentPage = Math.max(parseInt(page) || 1, 1);
+        const currentSize = Math.min(Math.max(parseInt(size) || 10, 1), 50);
+
+        const compatibleBloodIds = await this.getCompatibleBloodIds(userId);
+
+        const { requests, totalRequests } = await requestRepository.getMatchedRequests({
+            lng,
+            lat,
+            maxDistanceKm: km,
+            compatibleBloodIds,
+            excludePostedById: new mongoose.Types.ObjectId(userId),
+            page: currentPage,
+            size: currentSize,
+            search,
+        });
+
+        return {
+            requests,
+            pagination: {
+                page: currentPage,
+                size: currentSize,
+                total: totalRequests,
+                totalPages: Math.ceil(totalRequests / currentSize),
+            },
+        };
     }
 }
