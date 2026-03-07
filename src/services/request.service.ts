@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { CreateRequestDto } from "../dtos/request.dto";
+import { CreateRequestDto, UpdateRequestDto } from "../dtos/request.dto";
 import { RequestRepository } from "../repositories/request.repository";
 import { HttpError } from "../errors/http-error";
 import { UserRepository } from "../repositories/user.repository";
@@ -101,6 +101,97 @@ export class RequestService {
             throw new HttpError(404, "Request not found");
         }
         return request;
+    }
+
+    async updateRequest(requestId: string, userId: string, data: UpdateRequestDto) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new HttpError(401, "Unauthorized");
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(requestId)) {
+            throw new HttpError(400, "Invalid Request Id");
+        }
+
+        const currentRequest = await requestRepository.getRequestById(requestId);
+        if (!currentRequest) {
+            throw new HttpError(404, "Request not found");
+        }
+
+        if (String(currentRequest.postedBy?._id || currentRequest.postedBy) !== String(userId)) {
+            throw new HttpError(403, "You can only update your own request");
+        }
+
+        if (currentRequest.requestStatus !== "pending") {
+            throw new HttpError(400, "Only pending request can be updated");
+        }
+
+        if (data.requestFor === "others") {
+            if (!data.relationToPatient || data.relationToPatient.trim().length < 2) {
+                throw new HttpError(400, "relationToPatient is required when requestFor is 'others'");
+            }
+            if (!data.patientName || data.patientName.trim().length < 2) {
+                throw new HttpError(400, "patientName is required when requestFor is 'others'");
+            }
+            if (!data.patientPhone || data.patientPhone.trim().length < 6) {
+                throw new HttpError(400, "patientPhone is required when requestFor is 'others'");
+            }
+        }
+
+        const payload: any = { ...data };
+        if (data.recipientBloodId) {
+            if (!mongoose.Types.ObjectId.isValid(data.recipientBloodId)) {
+                throw new HttpError(400, "Invalid recipientBloodId");
+            }
+            payload.recipientBloodId = new mongoose.Types.ObjectId(data.recipientBloodId);
+        }
+
+        if (data.hospitalId) {
+            if (!mongoose.Types.ObjectId.isValid(data.hospitalId)) {
+                throw new HttpError(400, "Invalid hospitalId");
+            }
+            payload.hospitalId = new mongoose.Types.ObjectId(data.hospitalId);
+        }
+
+        if (data.requestFor === "self") {
+            payload.relationToPatient = undefined;
+            payload.patientName = undefined;
+            payload.patientPhone = undefined;
+        }
+
+        const updatedRequest = await requestRepository.updateOneRequest(requestId, payload);
+        if (!updatedRequest) {
+            throw new HttpError(404, "Request not found");
+        }
+        return updatedRequest;
+    }
+
+    async deleteRequest(requestId: string, userId: string) {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            throw new HttpError(401, "Unauthorized");
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(requestId)) {
+            throw new HttpError(400, "Invalid Request Id");
+        }
+
+        const currentRequest = await requestRepository.getRequestById(requestId);
+        if (!currentRequest) {
+            throw new HttpError(404, "Request not found");
+        }
+
+        if (String(currentRequest.postedBy?._id || currentRequest.postedBy) !== String(userId)) {
+            throw new HttpError(403, "You can only delete your own request");
+        }
+
+        if (currentRequest.requestStatus !== "pending") {
+            throw new HttpError(400, "Only pending request can be deleted");
+        }
+
+        const deleted = await requestRepository.deleteOneRequest(requestId);
+        if (!deleted) {
+            throw new HttpError(404, "Request not found");
+        }
+        return deleted;
     }
 
     async getMyHistory(userId: string) {

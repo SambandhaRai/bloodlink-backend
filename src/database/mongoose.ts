@@ -1,12 +1,23 @@
 import mongoose from "mongoose";
 import { MONGODB_URI } from "../config";
 
-export async function connectDatabase() {
+type ConnectDatabaseOptions = {
+    exitOnError?: boolean;
+};
+
+export async function connectDatabase(
+    uri: string = MONGODB_URI,
+    options: ConnectDatabaseOptions = {}
+) {
+    const { exitOnError = true } = options;
     try {
-        await mongoose.connect(MONGODB_URI);
+        await mongoose.connect(uri);
         console.log("Database connected succesfully");
     } catch (error) {
         console.log("Database error: ", error);
-        process.exit(1); // exit application on exception
+        if (exitOnError) {
+            process.exit(1); // exit application on exception
+        }
+        throw error;
     }
 }

@@ -38,3 +38,16 @@ export const CreateRequestDtoSchema = RequestSchema.pick({
 });
 
 export type CreateRequestDto = z.infer<typeof CreateRequestDtoSchema>;
+
+export const UpdateRequestDtoSchema = RequestSchema.pick({
+    recipientBloodId: true,
+    recipientDetails: true,
+    recipientCondition: true,
+    hospitalId: true,
+    requestFor: true,
+    relationToPatient: true,
+    patientName: true,
+    patientPhone: true,
+}).partial();
+
+export type UpdateRequestDto = z.infer<typeof UpdateRequestDtoSchema>;

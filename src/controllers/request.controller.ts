@@ -1,7 +1,7 @@
 import { RequestService } from "../services/request.service";
 import { Request, Response } from "express";
 import z from "zod";
-import { CreateRequestDtoSchema } from "../dtos/request.dto";
+import { CreateRequestDtoSchema, UpdateRequestDtoSchema } from "../dtos/request.dto";
 
 interface QueryParams {
     page?: string;
@@ -86,6 +86,57 @@ export class RequestController {
         } catch (err: Error | any) {
             return res.status(err.statusCode ?? 500).json(
                 { success: false, message: err.message || "Internal Server Error" }
+            );
+        }
+    }
+
+    async updateRequest(req: Request, res: Response) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).json(
+                    { success: false, message: "Unauthorized" }
+                );
+            }
+            const parsedData = UpdateRequestDtoSchema.safeParse(req.body);
+            if (!parsedData.success) {
+                return res.status(400).json(
+                    { success: false, errors: z.prettifyError(parsedData.error) }
+                );
+            }
+            const requestId = req.params.id;
+            const updatedRequest = await requestService.updateRequest(
+                requestId,
+                String(userId),
+                parsedData.data
+            );
+            return res.status(200).json(
+                { success: true, data: updatedRequest, message: "Request updated successfully" }
+            );
+        } catch (err: Error | any) {
+            return res.status(err.statusCode || 500).json(
+                { success: false, message: err.message || "Internal Server Error", }
+            );
+        }
+    }
+
+    async deleteRequest(req: Request, res: Response) {
+        try {
+            const userId = req.user?._id;
+            if (!userId) {
+                return res.status(401).json(
+                    { success: false, message: "Unauthorized" }
+                );
+            }
+
+            const requestId = req.params.id;
+            await requestService.deleteRequest(requestId, String(userId));
+            return res.status(200).json(
+                { success: true, message: "Request deleted successfully" }
+            );
+        } catch (err: Error | any) {
+            return res.status(err.statusCode || 500).json(
+                { success: false, message: err.message || "Internal Server Error", }
             );
         }
     }

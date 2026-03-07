@@ -27,7 +27,7 @@ describe(
 
         const samePhoneDifferentEmail = {
             ...testUser,
-            phoneNumber: "9851212277",
+            phoneNumber: testUser.phoneNumber,
             email: "another@email.com",
         };
 

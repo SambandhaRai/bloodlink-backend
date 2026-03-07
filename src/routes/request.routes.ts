@@ -14,7 +14,9 @@ router.get("/matched", authorizedMiddleware, requestController.getMatchedRequest
 router.get("/", authorizedMiddleware, requestController.getAllPendingRequests);
 router.get("/:id", authorizedMiddleware, requestController.getRequestById);
 
+router.patch("/:id", authorizedMiddleware, requestController.updateRequest);
 router.patch("/:id/accept", authorizedMiddleware, requestController.acceptRequest);
 router.patch("/:id/finish", authorizedMiddleware, requestController.finishRequest);
+router.delete("/:id", authorizedMiddleware, requestController.deleteRequest);
 
 export default router;

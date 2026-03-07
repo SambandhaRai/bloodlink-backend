@@ -6,6 +6,9 @@ import { HospitalModel } from "../models/hospital.model";
 
 export interface IRequestRepostory {
     createRequest(data: Partial<IRequest>): Promise<IRequest>;
+    updateOneRequest(id: String, data: Partial<IRequest>): Promise<IRequest | null>;
+    deleteOneRequest(id: String): Promise<boolean | null>;
+
     getAllPendingRequests({
         userId,
         page,
@@ -158,6 +161,16 @@ export class RequestRepository implements IRequestRepostory {
     async createRequest(data: Partial<IRequest>): Promise<IRequest> {
         const request = new RequestModel(data);
         return await request.save();
+    }
+
+    async updateOneRequest(id: String, data: Partial<IRequest>): Promise<IRequest | null> {
+        const updatedRequest = await RequestModel.findByIdAndUpdate(id, data, { new: true });
+        return updatedRequest;
+    }
+
+    async deleteOneRequest(id: String): Promise<boolean | null> {
+        const result = await RequestModel.findByIdAndDelete(id);
+        return result ? true : null;
     }
 
     async getRequestById(id: String): Promise<IRequest | null> {
